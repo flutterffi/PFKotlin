@@ -14,8 +14,10 @@ The goal is simple:
 If you want one place to review Kotlin basics and the official references, start here:
 
 - [docs/kotlin_official_study_map.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/kotlin_official_study_map.md)
+- [docs/practice_workspace_guide.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/practice_workspace_guide.md)
 
 This study map links the official Kotlin documentation to the matching files in this repository.
+The workspace guide explains where to read, where to change code, and where to practice freely.
 
 ## Learning Path
 
@@ -106,6 +108,7 @@ PFKotlin/
   projects/                   # small runnable project work
   data/                       # sample input data for the CLI project
   docs/                       # official study links and focused learning maps
+  playground/                 # safe hands-on area for your own experiments
   CHANGELOG.md                # short English progress log
 ```
 

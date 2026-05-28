@@ -53,3 +53,9 @@
 
 - Added a focused study map that links official Kotlin documentation to matching repository files.
 - Added a README entry so the official learning links are easy to find from the project root.
+
+## 0.8.2 - 2026-05-28
+
+- Added folder-level README guides to clarify the purpose of each learning area.
+- Added a workspace guide for hands-on practice and safe experimentation.
+- Added a `playground/` area for scratch work, kata-style drills, and temporary input data.
