@@ -38,6 +38,7 @@ Suggested order:
 
 1. `01_task_pipeline.kt`
 2. `02_result_and_sequences.kt`
+3. `03_parser_error_modeling.kt`
 
 Topics covered:
 
@@ -45,6 +46,8 @@ Topics covered:
 - generic transformation pipelines
 - lazy sequences
 - `Result`
+- sealed success and failure modeling
+- parser-style error handling
 - small domain modeling decisions
 
 ### 3. Projects
@@ -63,6 +66,7 @@ This mini project practices:
 - simple scoring strategies
 - command-line style program structure
 - file reading and parsing
+- exporting reports to files
 
 ## Repository Layout
 
@@ -86,10 +90,14 @@ java -jar foundations01.jar
 kotlinc advanced/01_task_pipeline.kt -include-runtime -d advanced01.jar
 java -jar advanced01.jar
 
+kotlinc advanced/03_parser_error_modeling.kt -include-runtime -d advanced03.jar
+java -jar advanced03.jar
+
 kotlinc projects/01_study_planner_cli/Main.kt -include-runtime -d study-planner.jar
 java -jar study-planner.jar
 java -jar study-planner.jar --energy HIGH
 java -jar study-planner.jar --file data/study_tasks.txt
+java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt
 ```
 
 ## How To Practice
@@ -110,3 +118,4 @@ Good modifications to try:
 - add one more rule to the planner score
 - convert one print-heavy section into returned values
 - add a new CLI flag and wire it into the parsing flow
+- write your own parser with a sealed success and failure model

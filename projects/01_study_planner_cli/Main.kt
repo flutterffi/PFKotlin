@@ -31,7 +31,8 @@ data class PlannedSession(
 
 data class PlannerOptions(
     val currentEnergy: EnergyLevel,
-    val filePath: String?
+    val filePath: String?,
+    val savePath: String?
 )
 
 fun StudyTask.urgencyScore(): Int = when (deadlineDays) {
@@ -193,22 +194,56 @@ fun printPlan(plan: List<PlannedSession>) {
     }
 }
 
+fun buildPlanReport(plan: List<PlannedSession>, currentEnergy: EnergyLevel): String {
+    val lines = mutableListOf<String>()
+    lines += "Study Planner Report"
+    lines += "===================="
+    lines += "Energy level: $currentEnergy"
+    lines += "Total tasks: ${plan.size}"
+    lines += ""
+
+    plan.forEachIndexed { index, session ->
+        val task = session.task
+        val deadlineText = task.deadlineDays?.let { "$it day(s)" } ?: "flexible"
+        lines += "${index + 1}. ${task.title}"
+        lines += "   topic=${task.topic}, score=${session.score}, block=${session.block}, time=${task.estimatedMinutes}m, deadline=$deadlineText"
+    }
+
+    lines += ""
+    lines += "Block summary"
+    plan.groupBy { it.block }.forEach { (block, sessions) ->
+        val totalMinutes = sessions.sumOf { it.task.estimatedMinutes }
+        lines += "- $block: ${sessions.size} task(s), $totalMinutes minutes"
+    }
+
+    return lines.joinToString("\n")
+}
+
+fun savePlanReport(path: String, content: String): Result<Unit> = runCatching {
+    val file = File(path)
+    file.parentFile?.mkdirs()
+    file.writeText(content)
+}
+
 fun printUsage() {
     println("Study Planner CLI")
     println("Usage:")
     println("  --help")
     println("  --energy <LOW|MEDIUM|HIGH>")
     println("  --file <path>")
+    println("  --save <path>")
     println()
     println("Examples:")
     println("  java -jar study-planner.jar")
     println("  java -jar study-planner.jar --energy HIGH")
     println("  java -jar study-planner.jar --energy LOW --file data/study_tasks.txt")
+    println("  java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt")
 }
 
 fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
     var energy = EnergyLevel.MEDIUM
     var filePath: String? = null
+    var savePath: String? = null
     var index = 0
 
     while (index < args.size) {
@@ -229,6 +264,11 @@ fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
                 filePath = args[index + 1]
                 index += 2
             }
+            "--save" -> {
+                require(index + 1 < args.size) { "Missing value after --save" }
+                savePath = args[index + 1]
+                index += 2
+            }
             else -> {
                 throw IllegalArgumentException("Unknown argument: ${args[index]}")
             }
@@ -237,7 +277,8 @@ fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
 
     PlannerOptions(
         currentEnergy = energy,
-        filePath = filePath
+        filePath = filePath,
+        savePath = savePath
     )
 }
 
@@ -309,4 +350,14 @@ fun main(args: Array<String>) {
 
     val plan = buildPlan(tasks, options.currentEnergy)
     printPlan(plan)
+
+    if (options.savePath != null) {
+        val report = buildPlanReport(plan, options.currentEnergy)
+        savePlanReport(options.savePath, report).getOrElse { error ->
+            System.err.println("Save error: ${error.message}")
+            return
+        }
+        println()
+        println("Saved report to ${options.savePath}")
+    }
 }
