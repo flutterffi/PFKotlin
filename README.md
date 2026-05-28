@@ -9,6 +9,14 @@ The goal is simple:
 - grow from foundations into more expressive Kotlin patterns
 - use one small project to connect language features to real design choices
 
+## Official Study Links
+
+If you want one place to review Kotlin basics and the official references, start here:
+
+- [docs/kotlin_official_study_map.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/kotlin_official_study_map.md)
+
+This study map links the official Kotlin documentation to the matching files in this repository.
+
 ## Learning Path
 
 ### 1. Foundations
@@ -97,6 +105,7 @@ PFKotlin/
   tests/                      # direct-run Kotlin tests for practice code
   projects/                   # small runnable project work
   data/                       # sample input data for the CLI project
+  docs/                       # official study links and focused learning maps
   CHANGELOG.md                # short English progress log
 ```
 

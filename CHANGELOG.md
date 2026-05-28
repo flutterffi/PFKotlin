@@ -48,3 +48,8 @@
 - Split the study planner CLI into multiple focused Kotlin source files.
 - Kept the existing CLI behavior, JSON support, and direct-run tests intact after the refactor.
 - Updated the README commands to compile the refactored multi-file project layout.
+
+## 0.8.1 - 2026-05-28
+
+- Added a focused study map that links official Kotlin documentation to matching repository files.
+- Added a README entry so the official learning links are easy to find from the project root.
