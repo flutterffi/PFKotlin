@@ -36,3 +36,9 @@
 - Added JSON import support for study tasks with a lightweight manual parser.
 - Added JSON export support for ranked planner results.
 - Added direct-run tests and sample data for the new JSON workflow.
+
+## 0.7.0 - 2026-05-28
+
+- Added an `--explain` flag to show score breakdowns for ranked tasks.
+- Included score breakdown details in exported planner reports and JSON output.
+- Added direct-run tests for breakdown rendering and score consistency.

@@ -26,7 +26,8 @@ data class StudyTask(
 data class PlannedSession(
     val task: StudyTask,
     val score: Int,
-    val block: String
+    val block: String,
+    val breakdown: ScoreBreakdown
 )
 
 data class PlannerOptions(
@@ -35,9 +36,26 @@ data class PlannerOptions(
     val jsonFilePath: String?,
     val savePath: String?,
     val exportJsonPath: String?,
+    val explain: Boolean,
     val topicFilter: TopicType?,
     val topCount: Int?
 )
+
+data class ScoreBreakdown(
+    val urgency: Int,
+    val energyFit: Int,
+    val topicBonus: Int,
+    val lengthPenalty: Int,
+    val difficultyPenalty: Int
+) {
+    fun totalScore(): Int {
+        return urgency + energyFit + topicBonus - lengthPenalty - difficultyPenalty
+    }
+
+    fun asLine(): String {
+        return "urgency=+$urgency, energy=+$energyFit, topic=+$topicBonus, length=-$lengthPenalty, difficulty=-$difficultyPenalty"
+    }
+}
 
 fun StudyTask.urgencyScore(): Int = when (deadlineDays) {
     null -> 5
@@ -70,19 +88,26 @@ fun StudyTask.planBlock(): String = when {
     else -> "Deep Work"
 }
 
+fun StudyTask.scoreBreakdown(currentEnergy: EnergyLevel): ScoreBreakdown {
+    return ScoreBreakdown(
+        urgency = urgencyScore(),
+        energyFit = energyScore(currentEnergy),
+        topicBonus = topicBonus(),
+        lengthPenalty = lengthPenalty(),
+        difficultyPenalty = difficulty
+    )
+}
+
 fun buildPlan(tasks: List<StudyTask>, currentEnergy: EnergyLevel): List<PlannedSession> {
     return tasks
         .map { task ->
-            val score = task.urgencyScore() +
-                task.energyScore(currentEnergy) +
-                task.topicBonus() -
-                task.lengthPenalty() -
-                task.difficulty
+            val breakdown = task.scoreBreakdown(currentEnergy)
 
             PlannedSession(
                 task = task,
-                score = score,
-                block = task.planBlock()
+                score = breakdown.totalScore(),
+                block = task.planBlock(),
+                breakdown = breakdown
             )
         }
         .sortedWith(
@@ -245,7 +270,14 @@ fun planToJson(plan: List<PlannedSession>, currentEnergy: EnergyLevel): String {
             jsonNullableNumber("deadlineDays", task.deadlineDays),
             jsonString("energyNeeded", task.energyNeeded.name),
             jsonNumber("score", session.score),
-            jsonString("block", session.block)
+            jsonString("block", session.block),
+            "\"breakdown\":{" +
+                jsonNumber("urgency", session.breakdown.urgency) + "," +
+                jsonNumber("energyFit", session.breakdown.energyFit) + "," +
+                jsonNumber("topicBonus", session.breakdown.topicBonus) + "," +
+                jsonNumber("lengthPenalty", session.breakdown.lengthPenalty) + "," +
+                jsonNumber("difficultyPenalty", session.breakdown.difficultyPenalty) +
+                "}"
         ).joinToString(prefix = "{", postfix = "}")
     }
 
@@ -414,7 +446,7 @@ fun loadTasksFromJsonFile(filePath: String): Result<List<StudyTask>> = runCatchi
     tasks
 }
 
-fun printPlan(plan: List<PlannedSession>) {
+fun printPlan(plan: List<PlannedSession>, explain: Boolean) {
     println("Study Planner Result")
     println("--------------------")
 
@@ -430,6 +462,10 @@ fun printPlan(plan: List<PlannedSession>) {
                 "time=${task.estimatedMinutes}m | " +
                 "deadline=$deadlineText"
         )
+
+        if (explain) {
+            println("   breakdown: ${session.breakdown.asLine()}")
+        }
     }
 
     val grouped = plan.groupBy { it.block }
@@ -441,7 +477,11 @@ fun printPlan(plan: List<PlannedSession>) {
     }
 }
 
-fun buildPlanReport(plan: List<PlannedSession>, currentEnergy: EnergyLevel): String {
+fun buildPlanReport(
+    plan: List<PlannedSession>,
+    currentEnergy: EnergyLevel,
+    explain: Boolean
+): String {
     val lines = mutableListOf<String>()
     lines += "Study Planner Report"
     lines += "===================="
@@ -454,6 +494,9 @@ fun buildPlanReport(plan: List<PlannedSession>, currentEnergy: EnergyLevel): Str
         val deadlineText = task.deadlineDays?.let { "$it day(s)" } ?: "flexible"
         lines += "${index + 1}. ${task.title}"
         lines += "   topic=${task.topic}, score=${session.score}, block=${session.block}, time=${task.estimatedMinutes}m, deadline=$deadlineText"
+        if (explain) {
+            lines += "   breakdown=${session.breakdown.asLine()}"
+        }
     }
 
     lines += ""
@@ -481,6 +524,7 @@ fun printUsage() {
     println("  --import-json <path>")
     println("  --save <path>")
     println("  --export-json <path>")
+    println("  --explain")
     println("  --topic <SYNTAX|OOP|COLLECTIONS|CONCURRENCY|TESTING>")
     println("  --top <count>")
     println()
@@ -491,7 +535,7 @@ fun printUsage() {
     println("  java -jar study-planner.jar --import-json data/study_tasks.json")
     println("  java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt")
     println("  java -jar study-planner.jar --export-json reports/today.json")
-    println("  java -jar study-planner.jar --topic COLLECTIONS --top 1")
+    println("  java -jar study-planner.jar --topic COLLECTIONS --top 1 --explain")
 }
 
 fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
@@ -500,6 +544,7 @@ fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
     var jsonFilePath: String? = null
     var savePath: String? = null
     var exportJsonPath: String? = null
+    var explain = false
     var topicFilter: TopicType? = null
     var topCount: Int? = null
     var index = 0
@@ -537,6 +582,10 @@ fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
                 exportJsonPath = args[index + 1]
                 index += 2
             }
+            "--explain" -> {
+                explain = true
+                index += 1
+            }
             "--topic" -> {
                 require(index + 1 < args.size) { "Missing value after --topic" }
                 topicFilter = parseTopicType(args[index + 1]).getOrElse {
@@ -567,6 +616,7 @@ fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
         jsonFilePath = jsonFilePath,
         savePath = savePath,
         exportJsonPath = exportJsonPath,
+        explain = explain,
         topicFilter = topicFilter,
         topCount = topCount
     )
@@ -646,10 +696,10 @@ fun main(args: Array<String>) {
     }
 
     val plan = buildPlan(tasks, options.currentEnergy)
-    printPlan(plan)
+    printPlan(plan, options.explain)
 
     if (options.savePath != null) {
-        val report = buildPlanReport(plan, options.currentEnergy)
+        val report = buildPlanReport(plan, options.currentEnergy, options.explain)
         savePlanReport(options.savePath, report).getOrElse { error ->
             System.err.println("Save error: ${error.message}")
             return

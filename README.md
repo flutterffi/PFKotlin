@@ -85,6 +85,7 @@ This mini project practices:
 - exporting reports to files
 - filtering and narrowing ranked results
 - manual JSON import and export
+- score explanation and ranking transparency
 
 ## Repository Layout
 
@@ -125,7 +126,7 @@ java -jar study-planner.jar --file data/study_tasks.txt
 java -jar study-planner.jar --import-json data/study_tasks.json
 java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt
 java -jar study-planner.jar --file data/study_tasks.txt --export-json reports/today.json
-java -jar study-planner.jar --topic COLLECTIONS --top 1
+java -jar study-planner.jar --topic COLLECTIONS --top 1 --explain
 ```
 
 ## How To Practice
@@ -150,3 +151,4 @@ Good modifications to try:
 - add one more test file and cover a failure case you broke on purpose
 - add a new planner filter and verify it with a direct-run test
 - compare text input and JSON input for the same task set
+- add one more score factor and verify its effect with `--explain`
