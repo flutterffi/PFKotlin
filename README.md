@@ -84,6 +84,7 @@ This mini project practices:
 - file reading and parsing
 - exporting reports to files
 - filtering and narrowing ranked results
+- manual JSON import and export
 
 ## Repository Layout
 
@@ -121,7 +122,9 @@ kotlinc projects/01_study_planner_cli/Main.kt -include-runtime -d study-planner.
 java -jar study-planner.jar
 java -jar study-planner.jar --energy HIGH
 java -jar study-planner.jar --file data/study_tasks.txt
+java -jar study-planner.jar --import-json data/study_tasks.json
 java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt
+java -jar study-planner.jar --file data/study_tasks.txt --export-json reports/today.json
 java -jar study-planner.jar --topic COLLECTIONS --top 1
 ```
 
@@ -146,3 +149,4 @@ Good modifications to try:
 - write your own parser with a sealed success and failure model
 - add one more test file and cover a failure case you broke on purpose
 - add a new planner filter and verify it with a direct-run test
+- compare text input and JSON input for the same task set

@@ -1,0 +1,42 @@
+[
+  {
+    "title": "Review smart casts and null checks",
+    "topic": "SYNTAX",
+    "difficulty": 2,
+    "estimatedMinutes": 15,
+    "deadlineDays": 1,
+    "energyNeeded": "LOW"
+  },
+  {
+    "title": "Refactor a model into data classes",
+    "topic": "OOP",
+    "difficulty": 3,
+    "estimatedMinutes": 30,
+    "deadlineDays": 2,
+    "energyNeeded": "MEDIUM"
+  },
+  {
+    "title": "Practice map, filter, and groupBy drills",
+    "topic": "COLLECTIONS",
+    "difficulty": 3,
+    "estimatedMinutes": 25,
+    "deadlineDays": 0,
+    "energyNeeded": "MEDIUM"
+  },
+  {
+    "title": "Read coroutine scope examples",
+    "topic": "CONCURRENCY",
+    "difficulty": 5,
+    "estimatedMinutes": 45,
+    "deadlineDays": null,
+    "energyNeeded": "HIGH"
+  },
+  {
+    "title": "Write assertions for planner ranking",
+    "topic": "TESTING",
+    "difficulty": 3,
+    "estimatedMinutes": 20,
+    "deadlineDays": 3,
+    "energyNeeded": "MEDIUM"
+  }
+]

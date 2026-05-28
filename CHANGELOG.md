@@ -30,3 +30,9 @@
 - Added topic filtering and top-N selection to the study planner CLI.
 - Added direct-run test coverage for the new filtering behavior and CLI parsing.
 - Expanded the README with focused planner filtering examples.
+
+## 0.6.0 - 2026-05-28
+
+- Added JSON import support for study tasks with a lightweight manual parser.
+- Added JSON export support for ranked planner results.
+- Added direct-run tests and sample data for the new JSON workflow.

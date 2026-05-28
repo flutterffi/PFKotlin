@@ -15,6 +15,7 @@ fun testParseArgsReadsEnergyFileAndSavePath() {
             "--energy", "high",
             "--file", "data/study_tasks.txt",
             "--save", "reports/out.txt",
+            "--export-json", "reports/out.json",
             "--topic", "collections",
             "--top", "1"
         )
@@ -23,6 +24,7 @@ fun testParseArgsReadsEnergyFileAndSavePath() {
     assertEquals(EnergyLevel.HIGH, options.currentEnergy, "energy option")
     assertEquals("data/study_tasks.txt", options.filePath, "file option")
     assertEquals("reports/out.txt", options.savePath, "save option")
+    assertEquals("reports/out.json", options.exportJsonPath, "export json option")
     assertEquals(TopicType.COLLECTIONS, options.topicFilter, "topic option")
     assertEquals(1, options.topCount, "top option")
     printTestSuccess("testParseArgsReadsEnergyFileAndSavePath")
@@ -60,7 +62,9 @@ fun testApplyPlannerOptionsFiltersByTopicAndTopCount() {
     val options = PlannerOptions(
         currentEnergy = EnergyLevel.MEDIUM,
         filePath = null,
+        jsonFilePath = null,
         savePath = null,
+        exportJsonPath = null,
         topicFilter = TopicType.COLLECTIONS,
         topCount = 1
     )
@@ -71,11 +75,34 @@ fun testApplyPlannerOptionsFiltersByTopicAndTopCount() {
     printTestSuccess("testApplyPlannerOptionsFiltersByTopicAndTopCount")
 }
 
+fun testLoadTasksFromJsonFileParsesArray() {
+    val tasks = loadTasksFromJsonFile(
+        "/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/data/study_tasks.json"
+    ).getOrThrow()
+
+    assertEquals(5, tasks.size, "json task count")
+    assertEquals("Review smart casts and null checks", tasks.first().title, "json first title")
+    assertEquals(null, tasks[3].deadlineDays, "json nullable deadline")
+    printTestSuccess("testLoadTasksFromJsonFileParsesArray")
+}
+
+fun testPlanToJsonContainsPlanFields() {
+    val plan = buildPlan(sampleTasks(), EnergyLevel.MEDIUM)
+    val json = planToJson(plan, EnergyLevel.MEDIUM)
+
+    assertContains(json, "\"energyLevel\": \"MEDIUM\"", "json energy field")
+    assertContains(json, "\"plan\": [", "json plan array")
+    assertContains(json, "\"score\":", "json score field")
+    printTestSuccess("testPlanToJsonContainsPlanFields")
+}
+
 fun main() {
     testBuildPlanPrioritizesUrgentCollectionTask()
     testParseArgsReadsEnergyFileAndSavePath()
     testLoadTasksFromFileSkipsComments()
     testBuildPlanReportContainsSummary()
     testApplyPlannerOptionsFiltersByTopicAndTopCount()
+    testLoadTasksFromJsonFileParsesArray()
+    testPlanToJsonContainsPlanFields()
     println("All study planner tests passed.")
 }
