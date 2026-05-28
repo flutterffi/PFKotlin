@@ -1,0 +1,6 @@
+# title|topic|difficulty|estimatedMinutes|deadlineDays|energyNeeded
+Review smart casts and null checks|SYNTAX|2|15|1|LOW
+Refactor a model into data classes|OOP|3|30|2|MEDIUM
+Practice map, filter, and groupBy drills|COLLECTIONS|3|25|0|MEDIUM
+Read coroutine scope examples|CONCURRENCY|5|45|none|HIGH
+Write assertions for planner ranking|TESTING|3|20|3|MEDIUM

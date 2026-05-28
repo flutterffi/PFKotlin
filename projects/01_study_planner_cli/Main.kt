@@ -1,3 +1,5 @@
+import java.io.File
+
 enum class TopicType {
     SYNTAX,
     OOP,
@@ -25,6 +27,11 @@ data class PlannedSession(
     val task: StudyTask,
     val score: Int,
     val block: String
+)
+
+data class PlannerOptions(
+    val currentEnergy: EnergyLevel,
+    val filePath: String?
 )
 
 fun StudyTask.urgencyScore(): Int = when (deadlineDays) {
@@ -80,6 +87,85 @@ fun buildPlan(tasks: List<StudyTask>, currentEnergy: EnergyLevel): List<PlannedS
         )
 }
 
+fun parseEnergyLevel(raw: String): Result<EnergyLevel> = runCatching {
+    EnergyLevel.valueOf(raw.uppercase())
+}
+
+fun parseTopicType(raw: String): Result<TopicType> = runCatching {
+    TopicType.valueOf(raw.uppercase())
+}
+
+fun parsePositiveInt(raw: String, fieldName: String): Result<Int> = runCatching {
+    raw.toInt().also {
+        require(it > 0) { "$fieldName must be positive" }
+    }
+}
+
+fun parseOptionalDeadline(raw: String): Result<Int?> = runCatching {
+    if (raw.equals("none", ignoreCase = true)) {
+        null
+    } else {
+        raw.toInt().also {
+            require(it >= 0) { "deadlineDays must be zero or positive" }
+        }
+    }
+}
+
+fun parseTaskLine(line: String, lineNumber: Int): Result<StudyTask> {
+    val parts = line.split("|").map { it.trim() }
+    if (parts.size != 6) {
+        return Result.failure(
+            IllegalArgumentException(
+                "Line $lineNumber must contain 6 pipe-separated fields"
+            )
+        )
+    }
+
+    val title = parts[0]
+    if (title.isBlank()) {
+        return Result.failure(IllegalArgumentException("Line $lineNumber has an empty title"))
+    }
+
+    return runCatching {
+        StudyTask(
+            title = title,
+            topic = parseTopicType(parts[1]).getOrElse {
+                throw IllegalArgumentException("Line $lineNumber has an invalid topic: ${parts[1]}")
+            },
+            difficulty = parsePositiveInt(parts[2], "difficulty").getOrElse {
+                throw IllegalArgumentException("Line $lineNumber has an invalid difficulty: ${parts[2]}")
+            },
+            estimatedMinutes = parsePositiveInt(parts[3], "estimatedMinutes").getOrElse {
+                throw IllegalArgumentException("Line $lineNumber has an invalid estimatedMinutes: ${parts[3]}")
+            },
+            deadlineDays = parseOptionalDeadline(parts[4]).getOrElse {
+                throw IllegalArgumentException("Line $lineNumber has an invalid deadlineDays: ${parts[4]}")
+            },
+            energyNeeded = parseEnergyLevel(parts[5]).getOrElse {
+                throw IllegalArgumentException("Line $lineNumber has an invalid energy level: ${parts[5]}")
+            }
+        )
+    }
+}
+
+fun loadTasksFromFile(filePath: String): Result<List<StudyTask>> = runCatching {
+    val file = File(filePath)
+    require(file.exists()) { "Task file does not exist: $filePath" }
+
+    val parsedTasks = file.readLines()
+        .mapIndexedNotNull { index, line ->
+            val trimmed = line.trim()
+            if (trimmed.isBlank() || trimmed.startsWith("#")) {
+                null
+            } else {
+                parseTaskLine(trimmed, index + 1).getOrElse { throw it }
+            }
+        }
+
+    require(parsedTasks.isNotEmpty()) { "No tasks were found in $filePath" }
+    parsedTasks
+}
+
 fun printPlan(plan: List<PlannedSession>) {
     println("Study Planner Result")
     println("--------------------")
@@ -105,6 +191,54 @@ fun printPlan(plan: List<PlannedSession>) {
         val totalMinutes = sessions.sumOf { it.task.estimatedMinutes }
         println("- $block: ${sessions.size} task(s), $totalMinutes minutes")
     }
+}
+
+fun printUsage() {
+    println("Study Planner CLI")
+    println("Usage:")
+    println("  --help")
+    println("  --energy <LOW|MEDIUM|HIGH>")
+    println("  --file <path>")
+    println()
+    println("Examples:")
+    println("  java -jar study-planner.jar")
+    println("  java -jar study-planner.jar --energy HIGH")
+    println("  java -jar study-planner.jar --energy LOW --file data/study_tasks.txt")
+}
+
+fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
+    var energy = EnergyLevel.MEDIUM
+    var filePath: String? = null
+    var index = 0
+
+    while (index < args.size) {
+        when (args[index]) {
+            "--help" -> {
+                printUsage()
+                throw IllegalStateException("HELP_REQUESTED")
+            }
+            "--energy" -> {
+                require(index + 1 < args.size) { "Missing value after --energy" }
+                energy = parseEnergyLevel(args[index + 1]).getOrElse {
+                    throw IllegalArgumentException("Invalid energy level: ${args[index + 1]}")
+                }
+                index += 2
+            }
+            "--file" -> {
+                require(index + 1 < args.size) { "Missing value after --file" }
+                filePath = args[index + 1]
+                index += 2
+            }
+            else -> {
+                throw IllegalArgumentException("Unknown argument: ${args[index]}")
+            }
+        }
+    }
+
+    PlannerOptions(
+        currentEnergy = energy,
+        filePath = filePath
+    )
 }
 
 fun sampleTasks(): List<StudyTask> = listOf(
@@ -150,8 +284,29 @@ fun sampleTasks(): List<StudyTask> = listOf(
     )
 )
 
-fun main() {
-    val currentEnergy = EnergyLevel.MEDIUM
-    val plan = buildPlan(sampleTasks(), currentEnergy)
+fun resolveTasks(options: PlannerOptions): Result<List<StudyTask>> {
+    return if (options.filePath == null) {
+        Result.success(sampleTasks())
+    } else {
+        loadTasksFromFile(options.filePath)
+    }
+}
+
+fun main(args: Array<String>) {
+    val options = parseArgs(args).getOrElse { error ->
+        if (error.message == "HELP_REQUESTED") {
+            return
+        }
+        System.err.println("Argument error: ${error.message}")
+        printUsage()
+        return
+    }
+
+    val tasks = resolveTasks(options).getOrElse { error ->
+        System.err.println("Input error: ${error.message}")
+        return
+    }
+
+    val plan = buildPlan(tasks, options.currentEnergy)
     printPlan(plan)
 }

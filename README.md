@@ -62,6 +62,7 @@ This mini project practices:
 - collection grouping and sorting
 - simple scoring strategies
 - command-line style program structure
+- file reading and parsing
 
 ## Repository Layout
 
@@ -70,6 +71,7 @@ PFKotlin/
   foundations/                # small Kotlin syntax drills
   advanced/                   # more idiomatic and expressive Kotlin practice
   projects/                   # small runnable project work
+  data/                       # sample input data for the CLI project
   CHANGELOG.md                # short English progress log
 ```
 
@@ -86,6 +88,8 @@ java -jar advanced01.jar
 
 kotlinc projects/01_study_planner_cli/Main.kt -include-runtime -d study-planner.jar
 java -jar study-planner.jar
+java -jar study-planner.jar --energy HIGH
+java -jar study-planner.jar --file data/study_tasks.txt
 ```
 
 ## How To Practice
@@ -105,3 +109,4 @@ Good modifications to try:
 - create a new extension function
 - add one more rule to the planner score
 - convert one print-heavy section into returned values
+- add a new CLI flag and wire it into the parsing flow
