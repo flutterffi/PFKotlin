@@ -11,12 +11,20 @@ fun testBuildPlanPrioritizesUrgentCollectionTask() {
 
 fun testParseArgsReadsEnergyFileAndSavePath() {
     val options = parseArgs(
-        arrayOf("--energy", "high", "--file", "data/study_tasks.txt", "--save", "reports/out.txt")
+        arrayOf(
+            "--energy", "high",
+            "--file", "data/study_tasks.txt",
+            "--save", "reports/out.txt",
+            "--topic", "collections",
+            "--top", "1"
+        )
     ).getOrThrow()
 
     assertEquals(EnergyLevel.HIGH, options.currentEnergy, "energy option")
     assertEquals("data/study_tasks.txt", options.filePath, "file option")
     assertEquals("reports/out.txt", options.savePath, "save option")
+    assertEquals(TopicType.COLLECTIONS, options.topicFilter, "topic option")
+    assertEquals(1, options.topCount, "top option")
     printTestSuccess("testParseArgsReadsEnergyFileAndSavePath")
 }
 
@@ -48,10 +56,26 @@ fun testBuildPlanReportContainsSummary() {
     printTestSuccess("testBuildPlanReportContainsSummary")
 }
 
+fun testApplyPlannerOptionsFiltersByTopicAndTopCount() {
+    val options = PlannerOptions(
+        currentEnergy = EnergyLevel.MEDIUM,
+        filePath = null,
+        savePath = null,
+        topicFilter = TopicType.COLLECTIONS,
+        topCount = 1
+    )
+
+    val filtered = applyPlannerOptions(sampleTasks(), options).getOrThrow()
+    assertEquals(1, filtered.size, "filtered size")
+    assertEquals(TopicType.COLLECTIONS, filtered.first().topic, "filtered topic")
+    printTestSuccess("testApplyPlannerOptionsFiltersByTopicAndTopCount")
+}
+
 fun main() {
     testBuildPlanPrioritizesUrgentCollectionTask()
     testParseArgsReadsEnergyFileAndSavePath()
     testLoadTasksFromFileSkipsComments()
     testBuildPlanReportContainsSummary()
+    testApplyPlannerOptionsFiltersByTopicAndTopCount()
     println("All study planner tests passed.")
 }

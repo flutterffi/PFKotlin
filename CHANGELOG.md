@@ -24,3 +24,9 @@
 - Added a `tests/` directory with direct-run Kotlin tests for the study planner and parser lessons.
 - Added lightweight assertion helpers to practice test structure without a build tool.
 - Expanded the README with test compilation and execution examples.
+
+## 0.5.0 - 2026-05-28
+
+- Added topic filtering and top-N selection to the study planner CLI.
+- Added direct-run test coverage for the new filtering behavior and CLI parsing.
+- Expanded the README with focused planner filtering examples.

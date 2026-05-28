@@ -83,6 +83,7 @@ This mini project practices:
 - command-line style program structure
 - file reading and parsing
 - exporting reports to files
+- filtering and narrowing ranked results
 
 ## Repository Layout
 
@@ -121,6 +122,7 @@ java -jar study-planner.jar
 java -jar study-planner.jar --energy HIGH
 java -jar study-planner.jar --file data/study_tasks.txt
 java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt
+java -jar study-planner.jar --topic COLLECTIONS --top 1
 ```
 
 ## How To Practice
@@ -143,3 +145,4 @@ Good modifications to try:
 - add a new CLI flag and wire it into the parsing flow
 - write your own parser with a sealed success and failure model
 - add one more test file and cover a failure case you broke on purpose
+- add a new planner filter and verify it with a direct-run test

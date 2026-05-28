@@ -32,7 +32,9 @@ data class PlannedSession(
 data class PlannerOptions(
     val currentEnergy: EnergyLevel,
     val filePath: String?,
-    val savePath: String?
+    val savePath: String?,
+    val topicFilter: TopicType?,
+    val topCount: Int?
 )
 
 fun StudyTask.urgencyScore(): Int = when (deadlineDays) {
@@ -86,6 +88,31 @@ fun buildPlan(tasks: List<StudyTask>, currentEnergy: EnergyLevel): List<PlannedS
                 .thenBy { it.task.estimatedMinutes }
                 .thenBy { it.task.title }
         )
+}
+
+fun applyPlannerOptions(
+    tasks: List<StudyTask>,
+    options: PlannerOptions
+): Result<List<StudyTask>> = runCatching {
+    val filtered = if (options.topicFilter == null) {
+        tasks
+    } else {
+        tasks.filter { it.topic == options.topicFilter }
+    }
+
+    require(filtered.isNotEmpty()) {
+        if (options.topicFilter == null) {
+            "No tasks are available"
+        } else {
+            "No tasks matched topic ${options.topicFilter}"
+        }
+    }
+
+    if (options.topCount == null) {
+        filtered
+    } else {
+        filtered.take(options.topCount)
+    }
 }
 
 fun parseEnergyLevel(raw: String): Result<EnergyLevel> = runCatching {
@@ -232,18 +259,23 @@ fun printUsage() {
     println("  --energy <LOW|MEDIUM|HIGH>")
     println("  --file <path>")
     println("  --save <path>")
+    println("  --topic <SYNTAX|OOP|COLLECTIONS|CONCURRENCY|TESTING>")
+    println("  --top <count>")
     println()
     println("Examples:")
     println("  java -jar study-planner.jar")
     println("  java -jar study-planner.jar --energy HIGH")
     println("  java -jar study-planner.jar --energy LOW --file data/study_tasks.txt")
     println("  java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt")
+    println("  java -jar study-planner.jar --topic COLLECTIONS --top 1")
 }
 
 fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
     var energy = EnergyLevel.MEDIUM
     var filePath: String? = null
     var savePath: String? = null
+    var topicFilter: TopicType? = null
+    var topCount: Int? = null
     var index = 0
 
     while (index < args.size) {
@@ -269,6 +301,20 @@ fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
                 savePath = args[index + 1]
                 index += 2
             }
+            "--topic" -> {
+                require(index + 1 < args.size) { "Missing value after --topic" }
+                topicFilter = parseTopicType(args[index + 1]).getOrElse {
+                    throw IllegalArgumentException("Invalid topic: ${args[index + 1]}")
+                }
+                index += 2
+            }
+            "--top" -> {
+                require(index + 1 < args.size) { "Missing value after --top" }
+                topCount = parsePositiveInt(args[index + 1], "top").getOrElse {
+                    throw IllegalArgumentException("Invalid top count: ${args[index + 1]}")
+                }
+                index += 2
+            }
             else -> {
                 throw IllegalArgumentException("Unknown argument: ${args[index]}")
             }
@@ -278,7 +324,9 @@ fun parseArgs(args: Array<String>): Result<PlannerOptions> = runCatching {
     PlannerOptions(
         currentEnergy = energy,
         filePath = filePath,
-        savePath = savePath
+        savePath = savePath,
+        topicFilter = topicFilter,
+        topCount = topCount
     )
 }
 
@@ -326,11 +374,16 @@ fun sampleTasks(): List<StudyTask> = listOf(
 )
 
 fun resolveTasks(options: PlannerOptions): Result<List<StudyTask>> {
-    return if (options.filePath == null) {
+    val loadedTasks = if (options.filePath == null) {
         Result.success(sampleTasks())
     } else {
         loadTasksFromFile(options.filePath)
     }
+
+    return loadedTasks.fold(
+        onSuccess = { applyPlannerOptions(it, options) },
+        onFailure = { Result.failure(it) }
+    )
 }
 
 fun main(args: Array<String>) {
