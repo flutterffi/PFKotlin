@@ -42,3 +42,9 @@
 - Added an `--explain` flag to show score breakdowns for ranked tasks.
 - Included score breakdown details in exported planner reports and JSON output.
 - Added direct-run tests for breakdown rendering and score consistency.
+
+## 0.8.0 - 2026-05-28
+
+- Split the study planner CLI into multiple focused Kotlin source files.
+- Kept the existing CLI behavior, JSON support, and direct-run tests intact after the refactor.
+- Updated the README commands to compile the refactored multi-file project layout.

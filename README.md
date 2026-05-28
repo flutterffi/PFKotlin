@@ -86,6 +86,7 @@ This mini project practices:
 - filtering and narrowing ranked results
 - manual JSON import and export
 - score explanation and ranking transparency
+- splitting a larger CLI into clearer source files
 
 ## Repository Layout
 
@@ -113,13 +114,13 @@ java -jar advanced01.jar
 kotlinc advanced/03_parser_error_modeling.kt -include-runtime -d advanced03.jar
 java -jar advanced03.jar
 
-kotlinc projects/01_study_planner_cli/Main.kt tests/TestSupport.kt tests/01_study_planner_tests.kt -include-runtime -d planner-tests.jar
+kotlinc projects/01_study_planner_cli/*.kt tests/TestSupport.kt tests/01_study_planner_tests.kt -include-runtime -d planner-tests.jar
 java -cp planner-tests.jar _01_study_planner_testsKt
 
 kotlinc advanced/03_parser_error_modeling.kt tests/TestSupport.kt tests/02_parser_error_modeling_tests.kt -include-runtime -d parser-tests.jar
 java -cp parser-tests.jar _02_parser_error_modeling_testsKt
 
-kotlinc projects/01_study_planner_cli/Main.kt -include-runtime -d study-planner.jar
+kotlinc projects/01_study_planner_cli/*.kt -include-runtime -d study-planner.jar
 java -jar study-planner.jar
 java -jar study-planner.jar --energy HIGH
 java -jar study-planner.jar --file data/study_tasks.txt
@@ -152,3 +153,4 @@ Good modifications to try:
 - add a new planner filter and verify it with a direct-run test
 - compare text input and JSON input for the same task set
 - add one more score factor and verify its effect with `--explain`
+- move one more function into a better file and keep the tests green
