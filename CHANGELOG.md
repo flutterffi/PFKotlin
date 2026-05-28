@@ -18,3 +18,9 @@
 - Added report export support to the study planner CLI with a new `--save` flag.
 - Added a new advanced lesson for sealed parser outcomes and explicit error modeling.
 - Expanded the README examples to cover file export and parser practice.
+
+## 0.4.0 - 2026-05-28
+
+- Added a `tests/` directory with direct-run Kotlin tests for the study planner and parser lessons.
+- Added lightweight assertion helpers to practice test structure without a build tool.
+- Expanded the README with test compilation and execution examples.

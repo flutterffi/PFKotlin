@@ -50,7 +50,23 @@ Topics covered:
 - parser-style error handling
 - small domain modeling decisions
 
-### 3. Projects
+### 3. Tests
+
+The `tests/` folder introduces direct-run Kotlin tests without requiring a full build tool yet.
+
+Suggested order:
+
+1. `01_study_planner_tests.kt`
+2. `02_parser_error_modeling_tests.kt`
+
+Topics covered:
+
+- lightweight assertion helpers
+- verifying ranking logic
+- validating parser behavior
+- using temporary files in tests
+
+### 4. Projects
 
 The `projects/` folder turns the syntax into a usable feature.
 
@@ -74,6 +90,7 @@ This mini project practices:
 PFKotlin/
   foundations/                # small Kotlin syntax drills
   advanced/                   # more idiomatic and expressive Kotlin practice
+  tests/                      # direct-run Kotlin tests for practice code
   projects/                   # small runnable project work
   data/                       # sample input data for the CLI project
   CHANGELOG.md                # short English progress log
@@ -92,6 +109,12 @@ java -jar advanced01.jar
 
 kotlinc advanced/03_parser_error_modeling.kt -include-runtime -d advanced03.jar
 java -jar advanced03.jar
+
+kotlinc projects/01_study_planner_cli/Main.kt tests/TestSupport.kt tests/01_study_planner_tests.kt -include-runtime -d planner-tests.jar
+java -cp planner-tests.jar _01_study_planner_testsKt
+
+kotlinc advanced/03_parser_error_modeling.kt tests/TestSupport.kt tests/02_parser_error_modeling_tests.kt -include-runtime -d parser-tests.jar
+java -cp parser-tests.jar _02_parser_error_modeling_testsKt
 
 kotlinc projects/01_study_planner_cli/Main.kt -include-runtime -d study-planner.jar
 java -jar study-planner.jar
@@ -119,3 +142,4 @@ Good modifications to try:
 - convert one print-heavy section into returned values
 - add a new CLI flag and wire it into the parsing flow
 - write your own parser with a sealed success and failure model
+- add one more test file and cover a failure case you broke on purpose
