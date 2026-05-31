@@ -32,3 +32,20 @@ java -jar study-planner.jar --import-json data/study_tasks.json
 java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt
 java -jar study-planner.jar --file data/study_tasks.txt --export-json reports/today.json
 ```
+
+## Layer demos
+
+If you want to inspect one layer without running the full CLI flow, use these demo entry files:
+
+- `ScoringDemo.kt`: inspect ranking and score breakdowns
+- `OutputDemo.kt`: inspect terminal rendering and text report output
+- `JsonDemo.kt`: inspect JSON shaping for a single task and a full plan
+
+Example commands:
+
+```bash
+kotlinc projects/01_study_planner_cli/*.kt -include-runtime -d planner-demos.jar
+java -cp planner-demos.jar ScoringDemoKt
+java -cp planner-demos.jar OutputDemoKt
+java -cp planner-demos.jar JsonDemoKt
+```

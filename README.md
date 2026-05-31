@@ -140,6 +140,11 @@ java -jar study-planner.jar --import-json data/study_tasks.json
 java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt
 java -jar study-planner.jar --file data/study_tasks.txt --export-json reports/today.json
 java -jar study-planner.jar --topic COLLECTIONS --top 1 --explain
+
+kotlinc projects/01_study_planner_cli/*.kt -include-runtime -d planner-demos.jar
+java -cp planner-demos.jar ScoringDemoKt
+java -cp planner-demos.jar OutputDemoKt
+java -cp planner-demos.jar JsonDemoKt
 ```
 
 ## How To Practice

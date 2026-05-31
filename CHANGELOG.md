@@ -59,3 +59,8 @@
 - Added folder-level README guides to clarify the purpose of each learning area.
 - Added a workspace guide for hands-on practice and safe experimentation.
 - Added a `playground/` area for scratch work, kata-style drills, and temporary input data.
+
+## 0.8.3 - 2026-05-31
+
+- Added focused demo entry files for the study planner scoring, output, and JSON layers.
+- Expanded the project documentation with commands for running individual layer demos.
