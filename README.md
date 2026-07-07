@@ -32,15 +32,26 @@ Suggested order:
 1. `01_hello_collections.kt`
 2. `02_null_safety_and_when.kt`
 3. `03_data_classes_and_extensions.kt`
+4. `04_variables_and_types.kt`
+5. `05_loops_and_ranges.kt`
+6. `06_functions_basics.kt`
+7. `07_classes_and_objects.kt`
+8. `08_exceptions_basics.kt`
+9. `09_interfaces_and_inheritance.kt`
 
 Topics covered:
 
 - variables and string templates
+- variables and basic types
 - lists, maps, and collection operators
 - `when` expressions
+- loops and ranges
 - null safety with `?.`, `?:`, and `let`
+- functions, parameters, and return values
 - data classes
+- classes, objects, interfaces, and inheritance
 - extension functions
+- exceptions and validation
 
 ### 2. Advanced
 

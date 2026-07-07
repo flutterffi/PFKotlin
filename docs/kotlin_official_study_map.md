@@ -13,6 +13,9 @@ Use these together with:
 - [foundations/01_hello_collections.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/01_hello_collections.kt)
 - [foundations/02_null_safety_and_when.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/02_null_safety_and_when.kt)
 - [foundations/03_data_classes_and_extensions.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/03_data_classes_and_extensions.kt)
+- [foundations/04_variables_and_types.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/04_variables_and_types.kt)
+- [foundations/05_loops_and_ranges.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/05_loops_and_ranges.kt)
+- [foundations/06_functions_basics.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/06_functions_basics.kt)
 
 ## 2. Core Basics
 
@@ -24,6 +27,7 @@ Use these together with:
 
 Good local matches:
 
+- [foundations/04_variables_and_types.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/04_variables_and_types.kt)
 - [foundations/02_null_safety_and_when.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/02_null_safety_and_when.kt)
 
 ### Control flow
@@ -32,6 +36,7 @@ Good local matches:
 
 Good local matches:
 
+- [foundations/05_loops_and_ranges.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/05_loops_and_ranges.kt)
 - [foundations/02_null_safety_and_when.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/02_null_safety_and_when.kt)
 
 ### Functions
@@ -42,6 +47,7 @@ Good local matches:
 
 Good local matches:
 
+- [foundations/06_functions_basics.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/06_functions_basics.kt)
 - [advanced/01_task_pipeline.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/advanced/01_task_pipeline.kt)
 - [advanced/02_result_and_sequences.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/advanced/02_result_and_sequences.kt)
 
@@ -53,7 +59,17 @@ Good local matches:
 Good local matches:
 
 - [foundations/03_data_classes_and_extensions.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/03_data_classes_and_extensions.kt)
+- [foundations/07_classes_and_objects.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/07_classes_and_objects.kt)
+- [foundations/09_interfaces_and_inheritance.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/09_interfaces_and_inheritance.kt)
 - [projects/01_study_planner_cli/Models.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/projects/01_study_planner_cli/Models.kt)
+
+## 4.5 Exceptions
+
+- Exceptions: [https://kotlinlang.org/docs/exceptions.html](https://kotlinlang.org/docs/exceptions.html)
+
+Good local matches:
+
+- [foundations/08_exceptions_basics.kt](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/foundations/08_exceptions_basics.kt)
 
 ## 4. Collections
 

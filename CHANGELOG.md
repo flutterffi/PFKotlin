@@ -69,3 +69,8 @@
 
 - Added a practical 7-day Kotlin bootcamp plan tied to the current repository structure.
 - Linked the bootcamp from the root README and docs index for faster study startup.
+
+## 0.9.0 - 2026-07-07
+
+- Expanded `foundations/` with lessons for variables, loops, functions, classes, exceptions, and interfaces.
+- Updated the study map and root README so the missing Kotlin basics now have direct repository coverage.
