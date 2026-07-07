@@ -64,3 +64,8 @@
 
 - Added focused demo entry files for the study planner scoring, output, and JSON layers.
 - Expanded the project documentation with commands for running individual layer demos.
+
+## 0.8.4 - 2026-07-07
+
+- Added a practical 7-day Kotlin bootcamp plan tied to the current repository structure.
+- Linked the bootcamp from the root README and docs index for faster study startup.

@@ -14,9 +14,11 @@ The goal is simple:
 If you want one place to review Kotlin basics and the official references, start here:
 
 - [docs/kotlin_official_study_map.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/kotlin_official_study_map.md)
+- [docs/kotlin_7_day_bootcamp.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/kotlin_7_day_bootcamp.md)
 - [docs/practice_workspace_guide.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/practice_workspace_guide.md)
 
 This study map links the official Kotlin documentation to the matching files in this repository.
+The 7-day bootcamp gives you a concrete sprint plan with daily reading, commands, and exercises.
 The workspace guide explains where to read, where to change code, and where to practice freely.
 
 ## Learning Path
