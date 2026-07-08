@@ -1,7 +1,8 @@
 import java.io.File
 
 fun buildCourseTrackerViewModel(
-    persistenceFile: File = File("data/course_tracker_state.json")
+    persistenceFile: File = File("data/course_tracker_state.json"),
+    taskRunner: CourseTaskRunner = ImmediateCourseTaskRunner
 ): CourseTrackerViewModel {
     val repository = InMemoryCourseRepository()
     val remoteSource = FakeCourseRemoteSource()
@@ -22,7 +23,8 @@ fun buildCourseTrackerViewModel(
         updateCourseStatusUseCase = updateCourseStatusUseCase,
         toggleBookmarkUseCase = toggleBookmarkUseCase,
         saveCoursesUseCase = saveCoursesUseCase,
-        buildStateUseCase = buildStateUseCase
+        buildStateUseCase = buildStateUseCase,
+        taskRunner = taskRunner
     )
 }
 
@@ -30,6 +32,10 @@ fun main() {
     val viewModel = buildCourseTrackerViewModel()
 
     viewModel.dispatch(CourseTrackerIntent.Load)
+    println(CourseTrackerConsoleView.render(viewModel.state))
+    println()
+
+    viewModel.dispatch(CourseTrackerIntent.RefreshFromRemote)
     println(CourseTrackerConsoleView.render(viewModel.state))
     println()
 

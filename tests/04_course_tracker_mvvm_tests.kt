@@ -16,6 +16,25 @@ fun testCourseTrackerLoadBuildsSummary() {
     printTestSuccess("testCourseTrackerLoadBuildsSummary")
 }
 
+fun testCourseTrackerLoadShowsIntermediateLoadingState() {
+    val runner = ControlledCourseTaskRunner()
+    val persistenceFile = newTempStateFile("course-tracker-loading")
+    persistenceFile.delete()
+    val viewModel = buildCourseTrackerViewModel(persistenceFile, runner)
+
+    viewModel.dispatch(CourseTrackerIntent.Load)
+
+    assertTrue(viewModel.state.isLoading, "state should be loading before queued task runs")
+    assertEquals("Load", viewModel.state.lastIntent, "last intent during loading")
+    assertEquals(1, runner.pendingCount(), "queued load task count")
+
+    runner.runAll()
+
+    assertTrue(!viewModel.state.isLoading, "state should stop loading after queued task runs")
+    assertEquals(4, viewModel.state.summary.totalCourses, "total count after queued load")
+    printTestSuccess("testCourseTrackerLoadShowsIntermediateLoadingState")
+}
+
 fun testCourseTrackerSearchNarrowsVisibleCourses() {
     val viewModel = buildCourseTrackerViewModel(newTempStateFile("course-tracker-search"))
 
@@ -145,6 +164,27 @@ fun testCourseTrackerCanSortByMinutes() {
     printTestSuccess("testCourseTrackerCanSortByMinutes")
 }
 
+fun testCourseTrackerRefreshShowsIntermediateRefreshingState() {
+    val runner = ControlledCourseTaskRunner()
+    val persistenceFile = newTempStateFile("course-tracker-refresh")
+    persistenceFile.delete()
+    val viewModel = buildCourseTrackerViewModel(persistenceFile, runner)
+
+    viewModel.dispatch(CourseTrackerIntent.Load)
+    runner.runAll()
+    viewModel.dispatch(CourseTrackerIntent.RefreshFromRemote)
+
+    assertTrue(viewModel.state.isRefreshing, "state should be refreshing before queued refresh runs")
+    assertEquals("RefreshFromRemote", viewModel.state.lastIntent, "last intent during refresh")
+    assertEquals(1, runner.pendingCount(), "queued refresh task count")
+
+    runner.runAll()
+
+    assertTrue(!viewModel.state.isRefreshing, "state should stop refreshing after queued task runs")
+    assertContains(viewModel.state.statusMessage, "refreshed", "refresh completion message")
+    printTestSuccess("testCourseTrackerRefreshShowsIntermediateRefreshingState")
+}
+
 fun testCourseTrackerImportFailureSetsErrorState() {
     val viewModel = buildCourseTrackerViewModel(newTempStateFile("course-tracker-error"))
 
@@ -175,6 +215,8 @@ fun testCourseTrackerReducerBuildsStateFromMutation() {
         statusFilter = CourseStatusFilter.ALL,
         levelFilter = CourseLevelFilter.ALL,
         sortOption = CourseSortOption.SMART,
+        isLoading = false,
+        isRefreshing = false,
         statusMessage = "Initial",
         errorMessage = null,
         persistencePath = "/tmp/test.json",
@@ -188,6 +230,8 @@ fun testCourseTrackerReducerBuildsStateFromMutation() {
             statusFilter = CourseStatusFilter.IN_PROGRESS,
             levelFilter = CourseLevelFilter.INTERMEDIATE,
             sortOption = CourseSortOption.LEVEL_DESC,
+            isLoading = false,
+            isRefreshing = false,
             statusMessage = "Reducer applied",
             errorMessage = null,
             lastIntent = "Search"
@@ -216,6 +260,8 @@ fun testCourseTrackerReducerBuildsStateFromMutation() {
             statusFilter = statusFilter,
             levelFilter = levelFilter,
             sortOption = sortOption,
+            isLoading = false,
+            isRefreshing = false,
             statusMessage = "Generated",
             errorMessage = null,
             persistencePath = "/tmp/test.json",
@@ -235,6 +281,7 @@ fun testCourseTrackerReducerBuildsStateFromMutation() {
 
 fun main() {
     testCourseTrackerLoadBuildsSummary()
+    testCourseTrackerLoadShowsIntermediateLoadingState()
     testCourseTrackerSearchNarrowsVisibleCourses()
     testCourseTrackerStatusUpdatesAffectSummary()
     testCourseTrackerBookmarkToggleChangesOrderingSignal()
@@ -242,6 +289,7 @@ fun main() {
     testCourseTrackerImportsCatalogFromJson()
     testCourseTrackerCanFilterByLevelAndStatusTogether()
     testCourseTrackerCanSortByMinutes()
+    testCourseTrackerRefreshShowsIntermediateRefreshingState()
     testCourseTrackerImportFailureSetsErrorState()
     testCourseTrackerReducerBuildsStateFromMutation()
     println("All course tracker MVVM tests passed.")

@@ -118,6 +118,8 @@ class BuildCourseTrackerStateUseCase(
             statusFilter = statusFilter,
             levelFilter = levelFilter,
             sortOption = sortOption,
+            isLoading = false,
+            isRefreshing = false,
             statusMessage = "Loaded ${visibleCourses.size} courses",
             errorMessage = null,
             persistencePath = localStore.path(),

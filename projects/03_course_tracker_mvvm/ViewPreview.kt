@@ -31,6 +31,8 @@ fun main() {
         statusFilter = CourseStatusFilter.ALL,
         levelFilter = CourseLevelFilter.ALL,
         sortOption = CourseSortOption.SMART,
+        isLoading = false,
+        isRefreshing = false,
         statusMessage = "Preview state",
         errorMessage = null,
         persistencePath = "/tmp/course_tracker_preview.json",

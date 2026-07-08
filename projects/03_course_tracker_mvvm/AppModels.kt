@@ -56,6 +56,8 @@ data class CourseTrackerState(
     val statusFilter: CourseStatusFilter,
     val levelFilter: CourseLevelFilter,
     val sortOption: CourseSortOption,
+    val isLoading: Boolean,
+    val isRefreshing: Boolean,
     val statusMessage: String,
     val errorMessage: String?,
     val persistencePath: String?,
@@ -64,6 +66,7 @@ data class CourseTrackerState(
 
 sealed class CourseTrackerIntent {
     data object Load : CourseTrackerIntent()
+    data object RefreshFromRemote : CourseTrackerIntent()
     data class ImportCatalog(val path: String) : CourseTrackerIntent()
     data object SaveProgress : CourseTrackerIntent()
     data class Search(val query: String) : CourseTrackerIntent()
@@ -76,11 +79,20 @@ sealed class CourseTrackerIntent {
 }
 
 sealed class CourseTrackerMutation {
+    data class Progress(
+        val isLoading: Boolean,
+        val isRefreshing: Boolean,
+        val statusMessage: String,
+        val lastIntent: String
+    ) : CourseTrackerMutation()
+
     data class Content(
         val query: String,
         val statusFilter: CourseStatusFilter,
         val levelFilter: CourseLevelFilter,
         val sortOption: CourseSortOption,
+        val isLoading: Boolean,
+        val isRefreshing: Boolean,
         val statusMessage: String,
         val errorMessage: String?,
         val lastIntent: String

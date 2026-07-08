@@ -1,3 +1,33 @@
+interface CourseTaskRunner {
+    fun submit(task: () -> Unit)
+}
+
+object ImmediateCourseTaskRunner : CourseTaskRunner {
+    override fun submit(task: () -> Unit) {
+        task()
+    }
+}
+
+class ControlledCourseTaskRunner : CourseTaskRunner {
+    private val pendingTasks = ArrayDeque<() -> Unit>()
+
+    override fun submit(task: () -> Unit) {
+        pendingTasks.addLast(task)
+    }
+
+    fun pendingCount(): Int = pendingTasks.size
+
+    fun runNext() {
+        pendingTasks.removeFirstOrNull()?.invoke()
+    }
+
+    fun runAll() {
+        while (pendingTasks.isNotEmpty()) {
+            runNext()
+        }
+    }
+}
+
 object CourseTrackerReducer {
     fun reduce(
         currentState: CourseTrackerState,
@@ -5,6 +35,16 @@ object CourseTrackerReducer {
         buildState: (String, CourseStatusFilter, CourseLevelFilter, CourseSortOption) -> CourseTrackerState
     ): CourseTrackerState {
         return when (mutation) {
+            is CourseTrackerMutation.Progress -> {
+                currentState.copy(
+                    isLoading = mutation.isLoading,
+                    isRefreshing = mutation.isRefreshing,
+                    statusMessage = mutation.statusMessage,
+                    errorMessage = null,
+                    lastIntent = mutation.lastIntent.ifBlank { currentState.lastIntent }
+                )
+            }
+
             is CourseTrackerMutation.Content -> {
                 buildState(
                     mutation.query,
@@ -12,6 +52,8 @@ object CourseTrackerReducer {
                     mutation.levelFilter,
                     mutation.sortOption
                 ).copy(
+                    isLoading = mutation.isLoading,
+                    isRefreshing = mutation.isRefreshing,
                     statusMessage = mutation.statusMessage,
                     errorMessage = mutation.errorMessage,
                     lastIntent = mutation.lastIntent.ifBlank { currentState.lastIntent }
@@ -28,7 +70,8 @@ class CourseTrackerViewModel(
     private val updateCourseStatusUseCase: UpdateCourseStatusUseCase,
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
     private val saveCoursesUseCase: SaveCoursesUseCase,
-    private val buildStateUseCase: BuildCourseTrackerStateUseCase
+    private val buildStateUseCase: BuildCourseTrackerStateUseCase,
+    private val taskRunner: CourseTaskRunner
 ) {
     private var query: String = ""
     private var statusFilter: CourseStatusFilter = CourseStatusFilter.ALL
@@ -42,33 +85,30 @@ class CourseTrackerViewModel(
         try {
             when (intent) {
                 CourseTrackerIntent.Load -> {
-                    val restored = loadCoursesFromLocalUseCase.execute()
-                    if (restored) {
-                        reduce(
-                            CourseTrackerMutation.Content(
-                                query = query,
-                                statusFilter = statusFilter,
-                                levelFilter = levelFilter,
-                                sortOption = sortOption,
-                                statusMessage = "Progress restored from disk",
-                                errorMessage = null,
-                                lastIntent = "Load"
-                            )
+                    reduce(
+                        CourseTrackerMutation.Progress(
+                            isLoading = true,
+                            isRefreshing = false,
+                            statusMessage = "Loading courses",
+                            lastIntent = "Load"
                         )
-                    } else {
-                        syncCoursesUseCase.execute()
-                        saveCoursesUseCase.execute()
-                        reduce(
-                            CourseTrackerMutation.Content(
-                                query = query,
-                                statusFilter = statusFilter,
-                                levelFilter = levelFilter,
-                                sortOption = sortOption,
-                                statusMessage = "Catalog synced from remote and cached",
-                                errorMessage = null,
-                                lastIntent = "Load"
-                            )
+                    )
+                    taskRunner.submit {
+                        completeLoad()
+                    }
+                }
+
+                CourseTrackerIntent.RefreshFromRemote -> {
+                    reduce(
+                        CourseTrackerMutation.Progress(
+                            isLoading = false,
+                            isRefreshing = true,
+                            statusMessage = "Refreshing catalog from remote",
+                            lastIntent = "RefreshFromRemote"
                         )
+                    )
+                    taskRunner.submit {
+                        completeRefresh()
                     }
                 }
 
@@ -81,6 +121,8 @@ class CourseTrackerViewModel(
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
                             sortOption = sortOption,
+                            isLoading = false,
+                            isRefreshing = false,
                             statusMessage = "Imported $importedCount courses from catalog",
                             errorMessage = null,
                             lastIntent = "ImportCatalog"
@@ -96,6 +138,8 @@ class CourseTrackerViewModel(
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
                             sortOption = sortOption,
+                            isLoading = false,
+                            isRefreshing = false,
                             statusMessage = "Progress saved to disk",
                             errorMessage = null,
                             lastIntent = "SaveProgress"
@@ -111,6 +155,8 @@ class CourseTrackerViewModel(
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
                             sortOption = sortOption,
+                            isLoading = false,
+                            isRefreshing = false,
                             statusMessage = "Search updated",
                             errorMessage = null,
                             lastIntent = "Search"
@@ -126,6 +172,8 @@ class CourseTrackerViewModel(
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
                             sortOption = sortOption,
+                            isLoading = false,
+                            isRefreshing = false,
                             statusMessage = "Status filter changed to ${intent.filter}",
                             errorMessage = null,
                             lastIntent = "FilterByStatus"
@@ -141,6 +189,8 @@ class CourseTrackerViewModel(
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
                             sortOption = sortOption,
+                            isLoading = false,
+                            isRefreshing = false,
                             statusMessage = "Level filter changed to ${intent.filter}",
                             errorMessage = null,
                             lastIntent = "FilterByLevel"
@@ -156,6 +206,8 @@ class CourseTrackerViewModel(
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
                             sortOption = sortOption,
+                            isLoading = false,
+                            isRefreshing = false,
                             statusMessage = "Sort changed to ${intent.option}",
                             errorMessage = null,
                             lastIntent = "SortBy"
@@ -172,6 +224,8 @@ class CourseTrackerViewModel(
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
                             sortOption = sortOption,
+                            isLoading = false,
+                            isRefreshing = false,
                             statusMessage = "Started ${intent.id}",
                             errorMessage = null,
                             lastIntent = "StartCourse"
@@ -188,6 +242,8 @@ class CourseTrackerViewModel(
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
                             sortOption = sortOption,
+                            isLoading = false,
+                            isRefreshing = false,
                             statusMessage = "Completed ${intent.id}",
                             errorMessage = null,
                             lastIntent = "CompleteCourse"
@@ -204,6 +260,8 @@ class CourseTrackerViewModel(
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
                             sortOption = sortOption,
+                            isLoading = false,
+                            isRefreshing = false,
                             statusMessage = "Bookmark toggled for ${intent.id}",
                             errorMessage = null,
                             lastIntent = "ToggleBookmark"
@@ -213,9 +271,84 @@ class CourseTrackerViewModel(
             }
         } catch (error: IllegalStateException) {
             state = state.copy(
+                isLoading = false,
+                isRefreshing = false,
                 statusMessage = "Operation failed",
                 errorMessage = error.message ?: "Unknown operation error",
                 lastIntent = intent::class.simpleName ?: "UnknownIntent"
+            )
+        }
+    }
+
+    private fun completeLoad() {
+        try {
+            val restored = loadCoursesFromLocalUseCase.execute()
+            if (restored) {
+                reduce(
+                    CourseTrackerMutation.Content(
+                        query = query,
+                        statusFilter = statusFilter,
+                        levelFilter = levelFilter,
+                        sortOption = sortOption,
+                        isLoading = false,
+                        isRefreshing = false,
+                        statusMessage = "Progress restored from disk",
+                        errorMessage = null,
+                        lastIntent = "Load"
+                    )
+                )
+            } else {
+                syncCoursesUseCase.execute()
+                saveCoursesUseCase.execute()
+                reduce(
+                    CourseTrackerMutation.Content(
+                        query = query,
+                        statusFilter = statusFilter,
+                        levelFilter = levelFilter,
+                        sortOption = sortOption,
+                        isLoading = false,
+                        isRefreshing = false,
+                        statusMessage = "Catalog synced from remote and cached",
+                        errorMessage = null,
+                        lastIntent = "Load"
+                    )
+                )
+            }
+        } catch (error: IllegalStateException) {
+            state = state.copy(
+                isLoading = false,
+                isRefreshing = false,
+                statusMessage = "Operation failed",
+                errorMessage = error.message ?: "Unknown load error",
+                lastIntent = "Load"
+            )
+        }
+    }
+
+    private fun completeRefresh() {
+        try {
+            syncCoursesUseCase.execute()
+            saveCoursesUseCase.execute()
+            reduce(
+                CourseTrackerMutation.Content(
+                    query = query,
+                    statusFilter = statusFilter,
+                    levelFilter = levelFilter,
+                    sortOption = sortOption,
+                    isLoading = false,
+                    isRefreshing = false,
+                    statusMessage = "Catalog refreshed from remote",
+                    errorMessage = null,
+                    lastIntent = "RefreshFromRemote"
+                )
+            )
+        } catch (error: IllegalStateException) {
+            state = state.copy(
+                isLoading = false,
+                isRefreshing = false,
+                statusMessage = "Operation failed",
+                errorMessage = error.message ?: "Unknown refresh error",
+                lastIntent = "RefreshFromRemote"
             )
         }
     }
@@ -234,6 +367,8 @@ object CourseTrackerConsoleView {
         lines += "status-filter: ${state.statusFilter}"
         lines += "level-filter: ${state.levelFilter}"
         lines += "sort: ${state.sortOption}"
+        lines += "loading: ${state.isLoading}"
+        lines += "refreshing: ${state.isRefreshing}"
         lines += "last-intent: ${state.lastIntent}"
         lines += "cache: ${state.persistencePath ?: "<none>"}"
         if (state.errorMessage != null) {
