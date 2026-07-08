@@ -7,6 +7,7 @@ This folder is for hands-on Kotlin practice that feels closer to real work.
 1. `01_study_planner_cli`
 2. `02_architecture_app`
 3. `03_course_tracker_mvvm`
+4. `04_learning_hub_store`
 
 ## How to use it
 
@@ -52,6 +53,9 @@ kotlinc projects/03_course_tracker_mvvm/AppModels.kt \
   projects/03_course_tracker_mvvm/ViewPreview.kt \
   -include-runtime -d course-tracker-preview.jar
 java -jar course-tracker-preview.jar
+
+kotlinc projects/04_learning_hub_store/*.kt -include-runtime -d learning-hub.jar
+java -jar learning-hub.jar
 ```
 
 ## Layer demos
