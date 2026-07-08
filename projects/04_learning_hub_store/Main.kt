@@ -27,6 +27,9 @@ fun buildLearningHubStore(
 
 fun main() {
     val store = buildLearningHubStore()
+    val subscription = store.observe(LearningHubStateObserver { observedState ->
+        println("observer -> ${observedState.lastIntent} | sync=${observedState.syncStage} | route=${observedState.route}")
+    })
 
     store.dispatch(LearningHubIntent.Bootstrap)
     println(LearningHubConsoleView.render(store.state))
@@ -47,4 +50,6 @@ fun main() {
     store.dispatch(LearningHubIntent.BackToDashboard)
     store.dispatch(LearningHubIntent.RefreshCatalog)
     println(LearningHubConsoleView.render(store.state))
+
+    subscription.cancel()
 }

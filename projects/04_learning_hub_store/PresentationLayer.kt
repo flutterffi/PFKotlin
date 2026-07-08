@@ -2,6 +2,14 @@ interface LearningHubTaskRunner {
     fun submit(task: () -> Unit)
 }
 
+fun interface LearningHubStateObserver {
+    fun onState(state: LearningHubState)
+}
+
+fun interface LearningHubSubscription {
+    fun cancel()
+}
+
 object ImmediateLearningHubTaskRunner : LearningHubTaskRunner {
     override fun submit(task: () -> Unit) {
         task()
@@ -77,6 +85,8 @@ class LearningHubStore(
     private var statusMessage: String = "Ready"
     private var errorMessage: String? = null
     private var notice: HubNotice? = null
+    private val observers = linkedMapOf<Int, LearningHubStateObserver>()
+    private var nextObserverId: Int = 1
 
     var state: LearningHubState = buildStateUseCase.execute(
         route = route,
@@ -88,6 +98,15 @@ class LearningHubStore(
         lastIntent = "InitialState"
     )
         private set
+
+    fun observe(observer: LearningHubStateObserver): LearningHubSubscription {
+        val observerId = nextObserverId++
+        observers[observerId] = observer
+        observer.onState(state)
+        return LearningHubSubscription {
+            observers.remove(observerId)
+        }
+    }
 
     fun dispatch(intent: LearningHubIntent) {
         when (intent) {
@@ -308,6 +327,13 @@ class LearningHubStore(
             is LearningHubMutation.Content -> mutation.notice
         }
         state = LearningHubReducer.reduce(state, mutation, buildStateUseCase::execute)
+        notifyObservers()
+    }
+
+    private fun notifyObservers() {
+        observers.values.forEach { observer ->
+            observer.onState(state)
+        }
     }
 }
 

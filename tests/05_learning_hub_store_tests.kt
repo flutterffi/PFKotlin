@@ -109,6 +109,54 @@ fun testLearningHubRefreshFailureMovesToFailedState() {
     printTestSuccess("testLearningHubRefreshFailureMovesToFailedState")
 }
 
+fun testLearningHubObserverReceivesInitialAndUpdatedStates() {
+    val snapshot = newLearningHubSnapshot("learning-hub-observer")
+    snapshot.delete()
+    val runner = ControlledLearningHubTaskRunner()
+    val store = buildLearningHubStore(snapshot, runner)
+    val observedIntents = mutableListOf<String>()
+
+    val subscription = store.observe(LearningHubStateObserver { state ->
+        observedIntents += state.lastIntent
+    })
+
+    store.dispatch(LearningHubIntent.Bootstrap)
+    runner.runAll()
+    store.dispatch(LearningHubIntent.FilterTrack(LessonTrack.ARCHITECTURE))
+
+    assertEquals("InitialState", observedIntents.first(), "first observed state")
+    assertTrue(observedIntents.contains("Bootstrap"), "observer should receive bootstrap states")
+    assertTrue(observedIntents.contains("FilterTrack"), "observer should receive filter state")
+
+    subscription.cancel()
+    store.dispatch(LearningHubIntent.BackToDashboard)
+    assertEquals(4, observedIntents.size, "observer event count after cancel")
+    printTestSuccess("testLearningHubObserverReceivesInitialAndUpdatedStates")
+}
+
+fun testLearningHubObserverSeesRefreshProgressAndCompletion() {
+    val snapshot = newLearningHubSnapshot("learning-hub-refresh-observer")
+    snapshot.delete()
+    val runner = ControlledLearningHubTaskRunner()
+    val store = buildLearningHubStore(snapshot, runner)
+    val syncStages = mutableListOf<SyncStage>()
+
+    store.observe(LearningHubStateObserver { state ->
+        syncStages += state.syncStage
+    })
+
+    store.dispatch(LearningHubIntent.Bootstrap)
+    runner.runAll()
+    store.dispatch(LearningHubIntent.RefreshCatalog)
+
+    assertEquals(SyncStage.REFRESHING, store.state.syncStage, "refresh observer intermediate state")
+    runner.runAll()
+
+    assertTrue(syncStages.contains(SyncStage.REFRESHING), "observer saw refreshing stage")
+    assertEquals(SyncStage.IDLE, syncStages.last(), "observer saw final idle stage")
+    printTestSuccess("testLearningHubObserverSeesRefreshProgressAndCompletion")
+}
+
 fun main() {
     testLearningHubBootstrapLoadsRemoteCatalog()
     testLearningHubBootstrapShowsIntermediateProgress()
@@ -117,5 +165,7 @@ fun main() {
     testLearningHubCanFilterTrack()
     testLearningHubCompletionCreatesNotice()
     testLearningHubRefreshFailureMovesToFailedState()
+    testLearningHubObserverReceivesInitialAndUpdatedStates()
+    testLearningHubObserverSeesRefreshProgressAndCompletion()
     println("All learning hub store tests passed.")
 }
