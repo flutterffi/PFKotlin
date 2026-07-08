@@ -74,3 +74,9 @@
 
 - Expanded `foundations/` with lessons for variables, loops, functions, classes, exceptions, and interfaces.
 - Updated the study map and root README so the missing Kotlin basics now have direct repository coverage.
+
+## 0.10.0 - 2026-07-08
+
+- Added an advanced Kotlin architecture practice app with data, domain, and presentation layers.
+- Added direct-run tests for the architecture app flow.
+- Updated the project and test guides with commands for the new app practice.

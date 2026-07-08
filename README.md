@@ -96,6 +96,7 @@ The `projects/` folder turns the syntax into a usable feature.
 Current project:
 
 1. `01_study_planner_cli`
+2. `02_architecture_app`
 
 This mini project practices:
 
@@ -110,6 +111,7 @@ This mini project practices:
 - manual JSON import and export
 - score explanation and ranking transparency
 - splitting a larger CLI into clearer source files
+- architecture layering with data, domain, and presentation boundaries
 
 ## Repository Layout
 
@@ -158,6 +160,12 @@ kotlinc projects/01_study_planner_cli/*.kt -include-runtime -d planner-demos.jar
 java -cp planner-demos.jar ScoringDemoKt
 java -cp planner-demos.jar OutputDemoKt
 java -cp planner-demos.jar JsonDemoKt
+
+kotlinc projects/02_architecture_app/*.kt -include-runtime -d architecture-app.jar
+java -jar architecture-app.jar
+
+kotlinc projects/02_architecture_app/*.kt tests/TestSupport.kt tests/03_architecture_app_tests.kt -include-runtime -d architecture-tests.jar
+java -cp architecture-tests.jar _03_architecture_app_testsKt
 ```
 
 ## How To Practice

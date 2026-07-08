@@ -13,6 +13,7 @@ This folder keeps direct-run Kotlin tests for practice code.
 - `TestSupport.kt`: tiny helpers for direct-run assertions
 - `01_study_planner_tests.kt`: planner behavior checks
 - `02_parser_error_modeling_tests.kt`: parser result checks
+- `03_architecture_app_tests.kt`: architecture app flow checks
 
 ## Commands
 
@@ -22,6 +23,9 @@ java -cp planner-tests.jar _01_study_planner_testsKt
 
 kotlinc advanced/03_parser_error_modeling.kt tests/TestSupport.kt tests/02_parser_error_modeling_tests.kt -include-runtime -d parser-tests.jar
 java -cp parser-tests.jar _02_parser_error_modeling_testsKt
+
+kotlinc projects/02_architecture_app/*.kt tests/TestSupport.kt tests/03_architecture_app_tests.kt -include-runtime -d architecture-tests.jar
+java -cp architecture-tests.jar _03_architecture_app_testsKt
 ```
 
 ## Suggested habit

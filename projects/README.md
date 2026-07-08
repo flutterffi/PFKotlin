@@ -5,6 +5,7 @@ This folder is for hands-on Kotlin practice that feels closer to real work.
 ## Current project
 
 1. `01_study_planner_cli`
+2. `02_architecture_app`
 
 ## How to use it
 
@@ -31,6 +32,9 @@ java -jar study-planner.jar --topic COLLECTIONS --top 1 --explain
 java -jar study-planner.jar --import-json data/study_tasks.json
 java -jar study-planner.jar --file data/study_tasks.txt --save reports/today.txt
 java -jar study-planner.jar --file data/study_tasks.txt --export-json reports/today.json
+
+kotlinc projects/02_architecture_app/*.kt -include-runtime -d architecture-app.jar
+java -jar architecture-app.jar
 ```
 
 ## Layer demos
