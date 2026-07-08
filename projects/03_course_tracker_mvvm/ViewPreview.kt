@@ -30,7 +30,8 @@ fun main() {
         query = "",
         filter = CourseStatusFilter.ALL,
         statusMessage = "Preview state",
-        persistencePath = "/tmp/course_tracker_preview.json"
+        persistencePath = "/tmp/course_tracker_preview.json",
+        lastIntent = "Preview"
     )
 
     println(CourseTrackerConsoleView.render(previewState))

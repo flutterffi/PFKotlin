@@ -41,15 +41,25 @@ data class CourseTrackerState(
     val query: String,
     val filter: CourseStatusFilter,
     val statusMessage: String,
-    val persistencePath: String?
+    val persistencePath: String?,
+    val lastIntent: String
 )
 
-sealed class CourseTrackerAction {
-    data object Load : CourseTrackerAction()
-    data object SaveProgress : CourseTrackerAction()
-    data class Search(val query: String) : CourseTrackerAction()
-    data class Filter(val filter: CourseStatusFilter) : CourseTrackerAction()
-    data class StartCourse(val id: String) : CourseTrackerAction()
-    data class CompleteCourse(val id: String) : CourseTrackerAction()
-    data class ToggleBookmark(val id: String) : CourseTrackerAction()
+sealed class CourseTrackerIntent {
+    data object Load : CourseTrackerIntent()
+    data object SaveProgress : CourseTrackerIntent()
+    data class Search(val query: String) : CourseTrackerIntent()
+    data class Filter(val filter: CourseStatusFilter) : CourseTrackerIntent()
+    data class StartCourse(val id: String) : CourseTrackerIntent()
+    data class CompleteCourse(val id: String) : CourseTrackerIntent()
+    data class ToggleBookmark(val id: String) : CourseTrackerIntent()
+}
+
+sealed class CourseTrackerMutation {
+    data class Content(
+        val query: String,
+        val filter: CourseStatusFilter,
+        val statusMessage: String,
+        val lastIntent: String
+    ) : CourseTrackerMutation()
 }

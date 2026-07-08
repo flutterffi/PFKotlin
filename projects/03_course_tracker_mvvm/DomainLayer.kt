@@ -102,7 +102,8 @@ class BuildCourseTrackerStateUseCase(
             query = query,
             filter = filter,
             statusMessage = "Loaded ${visibleCourses.size} courses",
-            persistencePath = localStore.path()
+            persistencePath = localStore.path(),
+            lastIntent = "InitialState"
         )
     }
 }

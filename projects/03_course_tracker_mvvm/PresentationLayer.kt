@@ -1,3 +1,20 @@
+object CourseTrackerReducer {
+    fun reduce(
+        currentState: CourseTrackerState,
+        mutation: CourseTrackerMutation,
+        buildState: (String, CourseStatusFilter) -> CourseTrackerState
+    ): CourseTrackerState {
+        return when (mutation) {
+            is CourseTrackerMutation.Content -> {
+                buildState(mutation.query, mutation.filter).copy(
+                    statusMessage = mutation.statusMessage,
+                    lastIntent = mutation.lastIntent.ifBlank { currentState.lastIntent }
+                )
+            }
+        }
+    }
+}
+
 class CourseTrackerViewModel(
     private val syncCoursesUseCase: SyncCoursesUseCase,
     private val loadCoursesFromLocalUseCase: LoadCoursesFromLocalUseCase,
@@ -12,56 +29,112 @@ class CourseTrackerViewModel(
     var state: CourseTrackerState = buildStateUseCase.execute(query, filter)
         private set
 
-    fun dispatch(action: CourseTrackerAction) {
-        when (action) {
-            CourseTrackerAction.Load -> {
+    fun dispatch(intent: CourseTrackerIntent) {
+        when (intent) {
+            CourseTrackerIntent.Load -> {
                 val restored = loadCoursesFromLocalUseCase.execute()
                 if (restored) {
-                    refresh("Progress restored from disk")
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            filter = filter,
+                            statusMessage = "Progress restored from disk",
+                            lastIntent = "Load"
+                        )
+                    )
                 } else {
                     syncCoursesUseCase.execute()
                     saveCoursesUseCase.execute()
-                    refresh("Catalog synced from remote and cached")
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            filter = filter,
+                            statusMessage = "Catalog synced from remote and cached",
+                            lastIntent = "Load"
+                        )
+                    )
                 }
             }
 
-            CourseTrackerAction.SaveProgress -> {
+            CourseTrackerIntent.SaveProgress -> {
                 saveCoursesUseCase.execute()
-                refresh("Progress saved to disk")
+                reduce(
+                    CourseTrackerMutation.Content(
+                        query = query,
+                        filter = filter,
+                        statusMessage = "Progress saved to disk",
+                        lastIntent = "SaveProgress"
+                    )
+                )
             }
 
-            is CourseTrackerAction.Search -> {
-                query = action.query.trim()
-                refresh("Search updated")
+            is CourseTrackerIntent.Search -> {
+                query = intent.query.trim()
+                reduce(
+                    CourseTrackerMutation.Content(
+                        query = query,
+                        filter = filter,
+                        statusMessage = "Search updated",
+                        lastIntent = "Search"
+                    )
+                )
             }
 
-            is CourseTrackerAction.Filter -> {
-                filter = action.filter
-                refresh("Filter changed to ${action.filter}")
+            is CourseTrackerIntent.Filter -> {
+                filter = intent.filter
+                reduce(
+                    CourseTrackerMutation.Content(
+                        query = query,
+                        filter = filter,
+                        statusMessage = "Filter changed to ${intent.filter}",
+                        lastIntent = "Filter"
+                    )
+                )
             }
 
-            is CourseTrackerAction.StartCourse -> {
-                updateCourseStatusUseCase.startCourse(action.id)
+            is CourseTrackerIntent.StartCourse -> {
+                updateCourseStatusUseCase.startCourse(intent.id)
                 saveCoursesUseCase.execute()
-                refresh("Started ${action.id}")
+                reduce(
+                    CourseTrackerMutation.Content(
+                        query = query,
+                        filter = filter,
+                        statusMessage = "Started ${intent.id}",
+                        lastIntent = "StartCourse"
+                    )
+                )
             }
 
-            is CourseTrackerAction.CompleteCourse -> {
-                updateCourseStatusUseCase.completeCourse(action.id)
+            is CourseTrackerIntent.CompleteCourse -> {
+                updateCourseStatusUseCase.completeCourse(intent.id)
                 saveCoursesUseCase.execute()
-                refresh("Completed ${action.id}")
+                reduce(
+                    CourseTrackerMutation.Content(
+                        query = query,
+                        filter = filter,
+                        statusMessage = "Completed ${intent.id}",
+                        lastIntent = "CompleteCourse"
+                    )
+                )
             }
 
-            is CourseTrackerAction.ToggleBookmark -> {
-                toggleBookmarkUseCase.execute(action.id)
+            is CourseTrackerIntent.ToggleBookmark -> {
+                toggleBookmarkUseCase.execute(intent.id)
                 saveCoursesUseCase.execute()
-                refresh("Bookmark toggled for ${action.id}")
+                reduce(
+                    CourseTrackerMutation.Content(
+                        query = query,
+                        filter = filter,
+                        statusMessage = "Bookmark toggled for ${intent.id}",
+                        lastIntent = "ToggleBookmark"
+                    )
+                )
             }
         }
     }
 
-    private fun refresh(message: String) {
-        state = buildStateUseCase.execute(query, filter).copy(statusMessage = message)
+    private fun reduce(mutation: CourseTrackerMutation) {
+        state = CourseTrackerReducer.reduce(state, mutation, buildStateUseCase::execute)
     }
 }
 
@@ -72,6 +145,7 @@ object CourseTrackerConsoleView {
         lines += "status: ${state.statusMessage}"
         lines += "query: ${state.query.ifBlank { "<none>" }}"
         lines += "filter: ${state.filter}"
+        lines += "last-intent: ${state.lastIntent}"
         lines += "cache: ${state.persistencePath ?: "<none>"}"
         lines += "summary: total=${state.summary.totalCourses}, visible=${state.summary.visibleCourses}, completed=${state.summary.completedCourses}, bookmarked=${state.summary.bookmarkedCourses}, remaining=${state.summary.remainingMinutes}m"
 

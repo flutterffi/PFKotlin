@@ -26,23 +26,23 @@ fun buildCourseTrackerViewModel(
 fun main() {
     val viewModel = buildCourseTrackerViewModel()
 
-    viewModel.dispatch(CourseTrackerAction.Load)
+    viewModel.dispatch(CourseTrackerIntent.Load)
     println(CourseTrackerConsoleView.render(viewModel.state))
     println()
 
-    viewModel.dispatch(CourseTrackerAction.Search("Architecture"))
+    viewModel.dispatch(CourseTrackerIntent.Search("Architecture"))
     println(CourseTrackerConsoleView.render(viewModel.state))
     println()
 
-    viewModel.dispatch(CourseTrackerAction.Filter(CourseStatusFilter.COMPLETED))
+    viewModel.dispatch(CourseTrackerIntent.Filter(CourseStatusFilter.COMPLETED))
     println(CourseTrackerConsoleView.render(viewModel.state))
     println()
 
-    viewModel.dispatch(CourseTrackerAction.ToggleBookmark("course-3"))
-    viewModel.dispatch(CourseTrackerAction.Search(""))
-    viewModel.dispatch(CourseTrackerAction.Filter(CourseStatusFilter.ALL))
-    viewModel.dispatch(CourseTrackerAction.StartCourse("course-1"))
-    viewModel.dispatch(CourseTrackerAction.CompleteCourse("course-2"))
-    viewModel.dispatch(CourseTrackerAction.SaveProgress)
+    viewModel.dispatch(CourseTrackerIntent.ToggleBookmark("course-3"))
+    viewModel.dispatch(CourseTrackerIntent.Search(""))
+    viewModel.dispatch(CourseTrackerIntent.Filter(CourseStatusFilter.ALL))
+    viewModel.dispatch(CourseTrackerIntent.StartCourse("course-1"))
+    viewModel.dispatch(CourseTrackerIntent.CompleteCourse("course-2"))
+    viewModel.dispatch(CourseTrackerIntent.SaveProgress)
     println(CourseTrackerConsoleView.render(viewModel.state))
 }
