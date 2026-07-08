@@ -1,0 +1,29 @@
+[
+  {
+    "id": "catalog-course-1",
+    "title": "Kotlin Coroutines Kickoff",
+    "category": "Concurrency",
+    "level": "INTERMEDIATE",
+    "estimatedMinutes": 55,
+    "status": "PLANNED",
+    "bookmarked": false
+  },
+  {
+    "id": "catalog-course-2",
+    "title": "Jetpack ViewModel Mapping",
+    "category": "Architecture",
+    "level": "ADVANCED",
+    "estimatedMinutes": 85,
+    "status": "IN_PROGRESS",
+    "bookmarked": true
+  },
+  {
+    "id": "catalog-course-3",
+    "title": "Testing Repositories by Hand",
+    "category": "Testing",
+    "level": "BEGINNER",
+    "estimatedMinutes": 35,
+    "status": "PLANNED",
+    "bookmarked": false
+  }
+]

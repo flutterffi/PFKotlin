@@ -5,8 +5,10 @@ fun buildCourseTrackerViewModel(
 ): CourseTrackerViewModel {
     val repository = InMemoryCourseRepository()
     val remoteSource = FakeCourseRemoteSource()
+    val catalogSource = FileCourseCatalogSource()
     val localStore = FileCourseLocalStore(persistenceFile)
     val syncCoursesUseCase = SyncCoursesUseCase(repository, remoteSource)
+    val importCatalogUseCase = ImportCatalogUseCase(repository, catalogSource)
     val loadCoursesFromLocalUseCase = LoadCoursesFromLocalUseCase(repository, localStore)
     val updateCourseStatusUseCase = UpdateCourseStatusUseCase(repository)
     val toggleBookmarkUseCase = ToggleBookmarkUseCase(repository)
@@ -15,6 +17,7 @@ fun buildCourseTrackerViewModel(
 
     return CourseTrackerViewModel(
         syncCoursesUseCase = syncCoursesUseCase,
+        importCatalogUseCase = importCatalogUseCase,
         loadCoursesFromLocalUseCase = loadCoursesFromLocalUseCase,
         updateCourseStatusUseCase = updateCourseStatusUseCase,
         toggleBookmarkUseCase = toggleBookmarkUseCase,
@@ -30,17 +33,26 @@ fun main() {
     println(CourseTrackerConsoleView.render(viewModel.state))
     println()
 
+    viewModel.dispatch(CourseTrackerIntent.ImportCatalog("data/course_catalog.json"))
+    println(CourseTrackerConsoleView.render(viewModel.state))
+    println()
+
     viewModel.dispatch(CourseTrackerIntent.Search("Architecture"))
     println(CourseTrackerConsoleView.render(viewModel.state))
     println()
 
-    viewModel.dispatch(CourseTrackerIntent.Filter(CourseStatusFilter.COMPLETED))
+    viewModel.dispatch(CourseTrackerIntent.FilterByStatus(CourseStatusFilter.COMPLETED))
+    println(CourseTrackerConsoleView.render(viewModel.state))
+    println()
+
+    viewModel.dispatch(CourseTrackerIntent.FilterByLevel(CourseLevelFilter.ADVANCED))
     println(CourseTrackerConsoleView.render(viewModel.state))
     println()
 
     viewModel.dispatch(CourseTrackerIntent.ToggleBookmark("course-3"))
     viewModel.dispatch(CourseTrackerIntent.Search(""))
-    viewModel.dispatch(CourseTrackerIntent.Filter(CourseStatusFilter.ALL))
+    viewModel.dispatch(CourseTrackerIntent.FilterByStatus(CourseStatusFilter.ALL))
+    viewModel.dispatch(CourseTrackerIntent.FilterByLevel(CourseLevelFilter.ALL))
     viewModel.dispatch(CourseTrackerIntent.StartCourse("course-1"))
     viewModel.dispatch(CourseTrackerIntent.CompleteCourse("course-2"))
     viewModel.dispatch(CourseTrackerIntent.SaveProgress)

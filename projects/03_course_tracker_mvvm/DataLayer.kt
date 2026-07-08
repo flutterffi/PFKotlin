@@ -10,6 +10,10 @@ interface CourseRemoteSource {
     fun fetchCourses(): List<LearningCourse>
 }
 
+interface CourseCatalogSource {
+    fun fetchCatalog(path: String): List<LearningCourse>
+}
+
 interface CourseLocalStore {
     fun exists(): Boolean
     fun loadCourses(): List<LearningCourse>
@@ -76,6 +80,21 @@ class FakeCourseRemoteSource : CourseRemoteSource {
             bookmarked = true
         )
     )
+}
+
+class FileCourseCatalogSource : CourseCatalogSource {
+    override fun fetchCatalog(path: String): List<LearningCourse> {
+        val file = File(path)
+        if (!file.exists()) {
+            throw IllegalStateException("Catalog file not found: $path")
+        }
+
+        val courses = CourseJsonCodec.decodeCourses(file.readText())
+        if (courses.isEmpty()) {
+            throw IllegalStateException("Catalog file is empty: $path")
+        }
+        return courses
+    }
 }
 
 class FileCourseLocalStore(

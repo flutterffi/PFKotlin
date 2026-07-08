@@ -28,7 +28,8 @@ fun main() {
             remainingMinutes = 105
         ),
         query = "",
-        filter = CourseStatusFilter.ALL,
+        statusFilter = CourseStatusFilter.ALL,
+        levelFilter = CourseLevelFilter.ALL,
         statusMessage = "Preview state",
         persistencePath = "/tmp/course_tracker_preview.json",
         lastIntent = "Preview"

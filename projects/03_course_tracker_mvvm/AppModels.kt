@@ -27,6 +27,13 @@ enum class CourseStatusFilter {
     COMPLETED
 }
 
+enum class CourseLevelFilter {
+    ALL,
+    BEGINNER,
+    INTERMEDIATE,
+    ADVANCED
+}
+
 data class CourseSummary(
     val totalCourses: Int,
     val visibleCourses: Int,
@@ -39,7 +46,8 @@ data class CourseTrackerState(
     val courses: List<LearningCourse>,
     val summary: CourseSummary,
     val query: String,
-    val filter: CourseStatusFilter,
+    val statusFilter: CourseStatusFilter,
+    val levelFilter: CourseLevelFilter,
     val statusMessage: String,
     val persistencePath: String?,
     val lastIntent: String
@@ -47,9 +55,11 @@ data class CourseTrackerState(
 
 sealed class CourseTrackerIntent {
     data object Load : CourseTrackerIntent()
+    data class ImportCatalog(val path: String) : CourseTrackerIntent()
     data object SaveProgress : CourseTrackerIntent()
     data class Search(val query: String) : CourseTrackerIntent()
-    data class Filter(val filter: CourseStatusFilter) : CourseTrackerIntent()
+    data class FilterByStatus(val filter: CourseStatusFilter) : CourseTrackerIntent()
+    data class FilterByLevel(val filter: CourseLevelFilter) : CourseTrackerIntent()
     data class StartCourse(val id: String) : CourseTrackerIntent()
     data class CompleteCourse(val id: String) : CourseTrackerIntent()
     data class ToggleBookmark(val id: String) : CourseTrackerIntent()
@@ -58,7 +68,8 @@ sealed class CourseTrackerIntent {
 sealed class CourseTrackerMutation {
     data class Content(
         val query: String,
-        val filter: CourseStatusFilter,
+        val statusFilter: CourseStatusFilter,
+        val levelFilter: CourseLevelFilter,
         val statusMessage: String,
         val lastIntent: String
     ) : CourseTrackerMutation()

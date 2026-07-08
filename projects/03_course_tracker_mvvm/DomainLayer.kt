@@ -7,6 +7,17 @@ class SyncCoursesUseCase(
     }
 }
 
+class ImportCatalogUseCase(
+    private val repository: CourseRepository,
+    private val catalogSource: CourseCatalogSource
+) {
+    fun execute(path: String): Int {
+        val courses = catalogSource.fetchCatalog(path)
+        repository.replaceCourses(courses)
+        return courses.size
+    }
+}
+
 class LoadCoursesFromLocalUseCase(
     private val repository: CourseRepository,
     private val localStore: CourseLocalStore
@@ -64,7 +75,8 @@ class BuildCourseTrackerStateUseCase(
 ) {
     fun execute(
         query: String,
-        filter: CourseStatusFilter
+        statusFilter: CourseStatusFilter,
+        levelFilter: CourseLevelFilter
     ): CourseTrackerState {
         val allCourses = repository.getCourses()
         val visibleCourses = allCourses
@@ -72,13 +84,19 @@ class BuildCourseTrackerStateUseCase(
                 val matchesQuery = query.isBlank() ||
                     course.title.contains(query, ignoreCase = true) ||
                     course.category.contains(query, ignoreCase = true)
-                val matchesFilter = when (filter) {
+                val matchesStatusFilter = when (statusFilter) {
                     CourseStatusFilter.ALL -> true
                     CourseStatusFilter.PLANNED -> course.status == CourseStatus.PLANNED
                     CourseStatusFilter.IN_PROGRESS -> course.status == CourseStatus.IN_PROGRESS
                     CourseStatusFilter.COMPLETED -> course.status == CourseStatus.COMPLETED
                 }
-                matchesQuery && matchesFilter
+                val matchesLevelFilter = when (levelFilter) {
+                    CourseLevelFilter.ALL -> true
+                    CourseLevelFilter.BEGINNER -> course.level == CourseLevel.BEGINNER
+                    CourseLevelFilter.INTERMEDIATE -> course.level == CourseLevel.INTERMEDIATE
+                    CourseLevelFilter.ADVANCED -> course.level == CourseLevel.ADVANCED
+                }
+                matchesQuery && matchesStatusFilter && matchesLevelFilter
             }
             .sortedWith(
                 compareByDescending<LearningCourse> { it.bookmarked }
@@ -100,7 +118,8 @@ class BuildCourseTrackerStateUseCase(
             courses = visibleCourses,
             summary = summary,
             query = query,
-            filter = filter,
+            statusFilter = statusFilter,
+            levelFilter = levelFilter,
             statusMessage = "Loaded ${visibleCourses.size} courses",
             persistencePath = localStore.path(),
             lastIntent = "InitialState"
