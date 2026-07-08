@@ -6,6 +6,10 @@ fun interface LearningHubStateObserver {
     fun onState(state: LearningHubState)
 }
 
+fun interface LearningHubEventObserver {
+    fun onEvent(event: HubEvent)
+}
+
 fun interface LearningHubSubscription {
     fun cancel()
 }
@@ -40,7 +44,7 @@ object LearningHubReducer {
     fun reduce(
         currentState: LearningHubState,
         mutation: LearningHubMutation,
-        buildState: (HubRoute, LessonTrack?, SyncStage, String, String?, HubNotice?, String) -> LearningHubState
+        buildState: (HubRoute, LessonTrack?, SyncStage, ConflictStrategy, Int, String, String?, HubNotice?, String) -> LearningHubState
     ): LearningHubState {
         return when (mutation) {
             is LearningHubMutation.Progress -> {
@@ -60,6 +64,8 @@ object LearningHubReducer {
                     mutation.route,
                     mutation.activeTrack,
                     mutation.syncStage,
+                    currentState.conflictStrategy,
+                    currentState.pendingSyncCount,
                     mutation.statusMessage,
                     mutation.errorMessage,
                     mutation.notice,
@@ -73,6 +79,7 @@ object LearningHubReducer {
 class LearningHubStore(
     private val bootstrapUseCase: BootstrapLearningHubUseCase,
     private val refreshUseCase: RefreshLearningHubUseCase,
+    private val mergeRemoteUseCase: MergeRemoteLearningHubUseCase,
     private val saveSnapshotUseCase: SaveLearningHubSnapshotUseCase,
     private val toggleBookmarkUseCase: ToggleHubBookmarkUseCase,
     private val completeLessonUseCase: CompleteHubLessonUseCase,
@@ -82,16 +89,21 @@ class LearningHubStore(
     private var route: HubRoute = HubRoute.Dashboard
     private var activeTrack: LessonTrack? = null
     private var syncStage: SyncStage = SyncStage.IDLE
+    private var conflictStrategy: ConflictStrategy = ConflictStrategy.LOCAL_WINS
     private var statusMessage: String = "Ready"
     private var errorMessage: String? = null
     private var notice: HubNotice? = null
+    private val pendingChanges = mutableListOf<PendingSyncChange>()
     private val observers = linkedMapOf<Int, LearningHubStateObserver>()
+    private val eventObservers = linkedMapOf<Int, LearningHubEventObserver>()
     private var nextObserverId: Int = 1
 
     var state: LearningHubState = buildStateUseCase.execute(
         route = route,
         activeTrack = activeTrack,
         syncStage = syncStage,
+        conflictStrategy = conflictStrategy,
+        pendingSyncCount = pendingChanges.size,
         statusMessage = statusMessage,
         errorMessage = errorMessage,
         notice = notice,
@@ -105,6 +117,14 @@ class LearningHubStore(
         observer.onState(state)
         return LearningHubSubscription {
             observers.remove(observerId)
+        }
+    }
+
+    fun observeEvents(observer: LearningHubEventObserver): LearningHubSubscription {
+        val observerId = nextObserverId++
+        eventObservers[observerId] = observer
+        return LearningHubSubscription {
+            eventObservers.remove(observerId)
         }
     }
 
@@ -154,6 +174,19 @@ class LearningHubStore(
                         lastIntent = "SaveSnapshot"
                     )
                 )
+                emitEvent(HubEvent("snapshot_saved", message))
+            }
+
+            is LearningHubIntent.SetConflictStrategy -> {
+                conflictStrategy = intent.strategy
+                state = state.copy(
+                    conflictStrategy = conflictStrategy,
+                    statusMessage = "Conflict strategy changed to ${intent.strategy}",
+                    errorMessage = null,
+                    lastIntent = "SetConflictStrategy"
+                )
+                notifyObservers()
+                emitEvent(HubEvent("strategy_changed", "Conflict strategy set to ${intent.strategy}"))
             }
 
             is LearningHubIntent.OpenLesson -> {
@@ -204,6 +237,7 @@ class LearningHubStore(
 
             is LearningHubIntent.ToggleBookmark -> {
                 val updatedLesson = toggleBookmarkUseCase.execute(intent.lessonId)
+                rememberPendingChange(intent.lessonId, PendingChangeType.TOGGLE_BOOKMARK)
                 saveSnapshotUseCase.execute()
                 reduce(
                     LearningHubMutation.Content(
@@ -216,10 +250,12 @@ class LearningHubStore(
                         lastIntent = "ToggleBookmark"
                     )
                 )
+                emitEvent(HubEvent("bookmark_updated", updatedLesson.title))
             }
 
             is LearningHubIntent.CompleteLesson -> {
                 val updatedLesson = completeLessonUseCase.execute(intent.lessonId)
+                rememberPendingChange(intent.lessonId, PendingChangeType.COMPLETE_LESSON)
                 saveSnapshotUseCase.execute()
                 reduce(
                     LearningHubMutation.Content(
@@ -232,6 +268,7 @@ class LearningHubStore(
                         lastIntent = "CompleteLesson"
                     )
                 )
+                emitEvent(HubEvent("lesson_completed", updatedLesson.title))
             }
 
             LearningHubIntent.ClearNotice -> {
@@ -264,6 +301,7 @@ class LearningHubStore(
                     lastIntent = "Bootstrap"
                 )
             )
+            emitEvent(HubEvent("bootstrap_complete", message))
         } catch (error: IllegalStateException) {
             syncStage = SyncStage.FAILED
             reduce(
@@ -277,12 +315,18 @@ class LearningHubStore(
                     lastIntent = "Bootstrap"
                 )
             )
+            emitEvent(HubEvent("bootstrap_failed", error.message ?: "Unknown bootstrap error"))
         }
     }
 
     private fun completeRefresh(intent: LearningHubIntent) {
         try {
-            val message = refreshUseCase.execute()
+            val message = if (pendingChanges.isEmpty()) {
+                refreshUseCase.execute()
+            } else {
+                mergeRemoteUseCase.execute(pendingChanges.toList(), conflictStrategy)
+            }
+            pendingChanges.clear()
             reduce(
                 LearningHubMutation.Content(
                     route = route,
@@ -294,6 +338,7 @@ class LearningHubStore(
                     lastIntent = if (intent == LearningHubIntent.RetrySync) "RetrySync" else "RefreshCatalog"
                 )
             )
+            emitEvent(HubEvent("refresh_complete", message))
         } catch (error: IllegalStateException) {
             reduce(
                 LearningHubMutation.Content(
@@ -306,6 +351,7 @@ class LearningHubStore(
                     lastIntent = if (intent == LearningHubIntent.RetrySync) "RetrySync" else "RefreshCatalog"
                 )
             )
+            emitEvent(HubEvent("refresh_failed", error.message ?: "Unknown refresh error"))
         }
     }
 
@@ -327,12 +373,27 @@ class LearningHubStore(
             is LearningHubMutation.Content -> mutation.notice
         }
         state = LearningHubReducer.reduce(state, mutation, buildStateUseCase::execute)
+        state = state.copy(
+            conflictStrategy = conflictStrategy,
+            pendingSyncCount = pendingChanges.size
+        )
         notifyObservers()
+    }
+
+    private fun rememberPendingChange(lessonId: String, type: PendingChangeType) {
+        pendingChanges.removeAll { it.lessonId == lessonId && it.type == type }
+        pendingChanges += PendingSyncChange(lessonId, type)
     }
 
     private fun notifyObservers() {
         observers.values.forEach { observer ->
             observer.onState(state)
+        }
+    }
+
+    private fun emitEvent(event: HubEvent) {
+        eventObservers.values.forEach { observer ->
+            observer.onEvent(event)
         }
     }
 }
@@ -346,6 +407,8 @@ object LearningHubConsoleView {
         lines += "route: ${state.route}"
         lines += "track-filter: ${state.activeTrack ?: "ALL"}"
         lines += "offline-ready: ${state.isOfflineReady}"
+        lines += "conflict-strategy: ${state.conflictStrategy}"
+        lines += "pending-sync: ${state.pendingSyncCount}"
         lines += "last-intent: ${state.lastIntent}"
         lines += "snapshot: ${state.persistencePath ?: "<none>"}"
         if (state.errorMessage != null) {

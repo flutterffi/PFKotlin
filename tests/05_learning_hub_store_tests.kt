@@ -91,6 +91,7 @@ fun testLearningHubCompletionCreatesNotice() {
 
     assertTrue(store.state.lessons.any { it.id == "lesson-5" && it.completed }, "lesson 5 completed")
     assertContains(store.state.notice?.message ?: "", "completed", "completion notice")
+    assertEquals(1, store.state.pendingSyncCount, "pending sync count after completion")
     printTestSuccess("testLearningHubCompletionCreatesNotice")
 }
 
@@ -157,6 +158,57 @@ fun testLearningHubObserverSeesRefreshProgressAndCompletion() {
     printTestSuccess("testLearningHubObserverSeesRefreshProgressAndCompletion")
 }
 
+fun testLearningHubCanSwitchConflictStrategy() {
+    val snapshot = newLearningHubSnapshot("learning-hub-strategy")
+    snapshot.delete()
+    val store = buildLearningHubStore(snapshot)
+
+    store.dispatch(LearningHubIntent.SetConflictStrategy(ConflictStrategy.REMOTE_WINS))
+
+    assertEquals(ConflictStrategy.REMOTE_WINS, store.state.conflictStrategy, "conflict strategy state")
+    assertEquals("SetConflictStrategy", store.state.lastIntent, "last intent after strategy change")
+    printTestSuccess("testLearningHubCanSwitchConflictStrategy")
+}
+
+fun testLearningHubRefreshClearsPendingChangesAfterMerge() {
+    val snapshot = newLearningHubSnapshot("learning-hub-merge")
+    snapshot.delete()
+    val store = buildLearningHubStore(snapshot)
+
+    store.dispatch(LearningHubIntent.Bootstrap)
+    store.dispatch(LearningHubIntent.CompleteLesson("lesson-5"))
+    store.dispatch(LearningHubIntent.ToggleBookmark("lesson-3"))
+
+    assertEquals(2, store.state.pendingSyncCount, "pending changes before refresh")
+
+    store.dispatch(LearningHubIntent.RefreshCatalog)
+
+    assertEquals(0, store.state.pendingSyncCount, "pending changes after refresh")
+    assertTrue(store.state.lessons.any { it.id == "lesson-5" && it.completed }, "completion should survive merge")
+    assertTrue(store.state.lessons.any { it.id == "lesson-3" && it.bookmarked }, "bookmark should survive merge")
+    printTestSuccess("testLearningHubRefreshClearsPendingChangesAfterMerge")
+}
+
+fun testLearningHubEventChannelReceivesOneShotEvents() {
+    val snapshot = newLearningHubSnapshot("learning-hub-events")
+    snapshot.delete()
+    val store = buildLearningHubStore(snapshot)
+    val eventNames = mutableListOf<String>()
+
+    store.observeEvents(LearningHubEventObserver { event ->
+        eventNames += event.name
+    })
+
+    store.dispatch(LearningHubIntent.Bootstrap)
+    store.dispatch(LearningHubIntent.CompleteLesson("lesson-5"))
+    store.dispatch(LearningHubIntent.RefreshCatalog)
+
+    assertTrue(eventNames.contains("bootstrap_complete"), "bootstrap event should be emitted")
+    assertTrue(eventNames.contains("lesson_completed"), "completion event should be emitted")
+    assertTrue(eventNames.contains("refresh_complete"), "refresh event should be emitted")
+    printTestSuccess("testLearningHubEventChannelReceivesOneShotEvents")
+}
+
 fun main() {
     testLearningHubBootstrapLoadsRemoteCatalog()
     testLearningHubBootstrapShowsIntermediateProgress()
@@ -167,5 +219,8 @@ fun main() {
     testLearningHubRefreshFailureMovesToFailedState()
     testLearningHubObserverReceivesInitialAndUpdatedStates()
     testLearningHubObserverSeesRefreshProgressAndCompletion()
+    testLearningHubCanSwitchConflictStrategy()
+    testLearningHubRefreshClearsPendingChangesAfterMerge()
+    testLearningHubEventChannelReceivesOneShotEvents()
     println("All learning hub store tests passed.")
 }

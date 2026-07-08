@@ -9,6 +9,7 @@ fun buildLearningHubStore(
     val localStore = FileLearningHubLocalStore(persistenceFile)
     val bootstrapUseCase = BootstrapLearningHubUseCase(repository, localStore, remoteSource)
     val refreshUseCase = RefreshLearningHubUseCase(repository, localStore, remoteSource)
+    val mergeRemoteUseCase = MergeRemoteLearningHubUseCase(repository, localStore, remoteSource)
     val saveSnapshotUseCase = SaveLearningHubSnapshotUseCase(repository, localStore)
     val toggleBookmarkUseCase = ToggleHubBookmarkUseCase(repository)
     val completeLessonUseCase = CompleteHubLessonUseCase(repository)
@@ -17,6 +18,7 @@ fun buildLearningHubStore(
     return LearningHubStore(
         bootstrapUseCase = bootstrapUseCase,
         refreshUseCase = refreshUseCase,
+        mergeRemoteUseCase = mergeRemoteUseCase,
         saveSnapshotUseCase = saveSnapshotUseCase,
         toggleBookmarkUseCase = toggleBookmarkUseCase,
         completeLessonUseCase = completeLessonUseCase,
@@ -28,7 +30,10 @@ fun buildLearningHubStore(
 fun main() {
     val store = buildLearningHubStore()
     val subscription = store.observe(LearningHubStateObserver { observedState ->
-        println("observer -> ${observedState.lastIntent} | sync=${observedState.syncStage} | route=${observedState.route}")
+        println("observer -> ${observedState.lastIntent} | sync=${observedState.syncStage} | pending=${observedState.pendingSyncCount} | route=${observedState.route}")
+    })
+    val eventSubscription = store.observeEvents(LearningHubEventObserver { event ->
+        println("event -> ${event.name} | ${event.message}")
     })
 
     store.dispatch(LearningHubIntent.Bootstrap)
@@ -48,8 +53,10 @@ fun main() {
     println()
 
     store.dispatch(LearningHubIntent.BackToDashboard)
+    store.dispatch(LearningHubIntent.SetConflictStrategy(ConflictStrategy.LOCAL_WINS))
     store.dispatch(LearningHubIntent.RefreshCatalog)
     println(LearningHubConsoleView.render(store.state))
 
     subscription.cancel()
+    eventSubscription.cancel()
 }

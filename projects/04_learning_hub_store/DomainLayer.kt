@@ -32,6 +32,55 @@ class RefreshLearningHubUseCase(
     }
 }
 
+class MergeRemoteLearningHubUseCase(
+    private val repository: LearningHubRepository,
+    private val localStore: LearningHubLocalStore,
+    private val remoteSource: LearningHubRemoteSource
+) {
+    fun execute(
+        pendingChanges: List<PendingSyncChange>,
+        strategy: ConflictStrategy
+    ): String {
+        val remoteLessons = remoteSource.fetchLessons()
+        val localLessons = repository.allLessons()
+        val localLessonMap = localLessons.associateBy { it.id }
+        val mergedLessons = remoteLessons.map { remoteLesson ->
+            val localLesson = localLessonMap[remoteLesson.id] ?: return@map remoteLesson
+            when (strategy) {
+                ConflictStrategy.LOCAL_WINS -> applyPendingChanges(remoteLesson, localLesson, pendingChanges)
+                ConflictStrategy.REMOTE_WINS -> remoteLesson
+            }
+        }
+
+        repository.replaceLessons(mergedLessons)
+        localStore.saveLessons(mergedLessons)
+        return when (strategy) {
+            ConflictStrategy.LOCAL_WINS -> "Merged remote catalog with local changes"
+            ConflictStrategy.REMOTE_WINS -> "Replaced local snapshot with remote catalog"
+        }
+    }
+
+    private fun applyPendingChanges(
+        remoteLesson: HubLesson,
+        localLesson: HubLesson,
+        pendingChanges: List<PendingSyncChange>
+    ): HubLesson {
+        val changesForLesson = pendingChanges.filter { it.lessonId == remoteLesson.id }
+        if (changesForLesson.isEmpty()) {
+            return remoteLesson
+        }
+
+        var mergedLesson = remoteLesson
+        changesForLesson.forEach { change ->
+            mergedLesson = when (change.type) {
+                PendingChangeType.TOGGLE_BOOKMARK -> mergedLesson.copy(bookmarked = localLesson.bookmarked)
+                PendingChangeType.COMPLETE_LESSON -> mergedLesson.copy(completed = localLesson.completed)
+            }
+        }
+        return mergedLesson
+    }
+}
+
 class SaveLearningHubSnapshotUseCase(
     private val repository: LearningHubRepository,
     private val localStore: LearningHubLocalStore
@@ -74,6 +123,8 @@ class BuildLearningHubStateUseCase(
         route: HubRoute,
         activeTrack: LessonTrack?,
         syncStage: SyncStage,
+        conflictStrategy: ConflictStrategy,
+        pendingSyncCount: Int,
         statusMessage: String,
         errorMessage: String?,
         notice: HubNotice?,
@@ -110,6 +161,8 @@ class BuildLearningHubStateUseCase(
             activeTrack = activeTrack,
             syncStage = syncStage,
             isOfflineReady = localStore.exists(),
+            conflictStrategy = conflictStrategy,
+            pendingSyncCount = pendingSyncCount,
             statusMessage = statusMessage,
             errorMessage = errorMessage,
             notice = notice,

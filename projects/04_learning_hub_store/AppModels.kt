@@ -12,6 +12,16 @@ enum class SyncStage {
     FAILED
 }
 
+enum class ConflictStrategy {
+    LOCAL_WINS,
+    REMOTE_WINS
+}
+
+enum class PendingChangeType {
+    TOGGLE_BOOKMARK,
+    COMPLETE_LESSON
+}
+
 data class HubLesson(
     val id: String,
     val title: String,
@@ -32,6 +42,16 @@ data class HubNotice(
     val message: String
 )
 
+data class PendingSyncChange(
+    val lessonId: String,
+    val type: PendingChangeType
+)
+
+data class HubEvent(
+    val name: String,
+    val message: String
+)
+
 data class LearningHubSummary(
     val totalLessons: Int,
     val visibleLessons: Int,
@@ -49,6 +69,8 @@ data class LearningHubState(
     val activeTrack: LessonTrack?,
     val syncStage: SyncStage,
     val isOfflineReady: Boolean,
+    val conflictStrategy: ConflictStrategy,
+    val pendingSyncCount: Int,
     val statusMessage: String,
     val errorMessage: String?,
     val notice: HubNotice?,
@@ -61,6 +83,7 @@ sealed class LearningHubIntent {
     data object RefreshCatalog : LearningHubIntent()
     data object RetrySync : LearningHubIntent()
     data object SaveSnapshot : LearningHubIntent()
+    data class SetConflictStrategy(val strategy: ConflictStrategy) : LearningHubIntent()
     data class OpenLesson(val lessonId: String) : LearningHubIntent()
     data object BackToDashboard : LearningHubIntent()
     data class FilterTrack(val track: LessonTrack?) : LearningHubIntent()
