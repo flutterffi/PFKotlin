@@ -6,6 +6,7 @@ This folder is for hands-on Kotlin practice that feels closer to real work.
 
 1. `01_study_planner_cli`
 2. `02_architecture_app`
+3. `03_course_tracker_mvvm`
 
 ## How to use it
 
@@ -35,6 +36,22 @@ java -jar study-planner.jar --file data/study_tasks.txt --export-json reports/to
 
 kotlinc projects/02_architecture_app/*.kt -include-runtime -d architecture-app.jar
 java -jar architecture-app.jar
+
+kotlinc projects/03_course_tracker_mvvm/AppModels.kt \
+  projects/03_course_tracker_mvvm/DataLayer.kt \
+  projects/03_course_tracker_mvvm/DomainLayer.kt \
+  projects/03_course_tracker_mvvm/PresentationLayer.kt \
+  projects/03_course_tracker_mvvm/Main.kt \
+  -include-runtime -d course-tracker-app.jar
+java -jar course-tracker-app.jar
+
+kotlinc projects/03_course_tracker_mvvm/AppModels.kt \
+  projects/03_course_tracker_mvvm/DataLayer.kt \
+  projects/03_course_tracker_mvvm/DomainLayer.kt \
+  projects/03_course_tracker_mvvm/PresentationLayer.kt \
+  projects/03_course_tracker_mvvm/ViewPreview.kt \
+  -include-runtime -d course-tracker-preview.jar
+java -jar course-tracker-preview.jar
 ```
 
 ## Layer demos

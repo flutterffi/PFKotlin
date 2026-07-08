@@ -80,3 +80,9 @@
 - Added an advanced Kotlin architecture practice app with data, domain, and presentation layers.
 - Added direct-run tests for the architecture app flow.
 - Updated the project and test guides with commands for the new app practice.
+
+## 0.11.0 - 2026-07-08
+
+- Added a second advanced app practice with MVVM-style state handling, search, filters, and bookmarking.
+- Added a dedicated view preview entry so the presentation layer can be run independently.
+- Added a focused advanced app study track that links official Kotlin docs to the architecture practice path.

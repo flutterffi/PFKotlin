@@ -16,6 +16,7 @@ If you want one place to review Kotlin basics and the official references, start
 - [docs/kotlin_official_study_map.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/kotlin_official_study_map.md)
 - [docs/kotlin_7_day_bootcamp.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/kotlin_7_day_bootcamp.md)
 - [docs/practice_workspace_guide.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/practice_workspace_guide.md)
+- [docs/kotlin_advanced_app_track.md](/Users/platojobs/Desktop/Github/flutterffi/PFKotlin/docs/kotlin_advanced_app_track.md)
 
 This study map links the official Kotlin documentation to the matching files in this repository.
 The 7-day bootcamp gives you a concrete sprint plan with daily reading, commands, and exercises.
@@ -97,6 +98,7 @@ Current project:
 
 1. `01_study_planner_cli`
 2. `02_architecture_app`
+3. `03_course_tracker_mvvm`
 
 This mini project practices:
 
@@ -112,6 +114,7 @@ This mini project practices:
 - score explanation and ranking transparency
 - splitting a larger CLI into clearer source files
 - architecture layering with data, domain, and presentation boundaries
+- MVVM-style state handling with search, filtering, and bookmarking flows
 
 ## Repository Layout
 
@@ -166,6 +169,31 @@ java -jar architecture-app.jar
 
 kotlinc projects/02_architecture_app/*.kt tests/TestSupport.kt tests/03_architecture_app_tests.kt -include-runtime -d architecture-tests.jar
 java -cp architecture-tests.jar _03_architecture_app_testsKt
+
+kotlinc projects/03_course_tracker_mvvm/AppModels.kt \
+  projects/03_course_tracker_mvvm/DataLayer.kt \
+  projects/03_course_tracker_mvvm/DomainLayer.kt \
+  projects/03_course_tracker_mvvm/PresentationLayer.kt \
+  projects/03_course_tracker_mvvm/Main.kt \
+  -include-runtime -d course-tracker-app.jar
+java -jar course-tracker-app.jar
+
+kotlinc projects/03_course_tracker_mvvm/AppModels.kt \
+  projects/03_course_tracker_mvvm/DataLayer.kt \
+  projects/03_course_tracker_mvvm/DomainLayer.kt \
+  projects/03_course_tracker_mvvm/PresentationLayer.kt \
+  projects/03_course_tracker_mvvm/ViewPreview.kt \
+  -include-runtime -d course-tracker-preview.jar
+java -jar course-tracker-preview.jar
+
+kotlinc projects/03_course_tracker_mvvm/AppModels.kt \
+  projects/03_course_tracker_mvvm/DataLayer.kt \
+  projects/03_course_tracker_mvvm/DomainLayer.kt \
+  projects/03_course_tracker_mvvm/PresentationLayer.kt \
+  projects/03_course_tracker_mvvm/Main.kt \
+  tests/TestSupport.kt tests/04_course_tracker_mvvm_tests.kt \
+  -include-runtime -d course-tracker-tests.jar
+java -cp course-tracker-tests.jar _04_course_tracker_mvvm_testsKt
 ```
 
 ## How To Practice
