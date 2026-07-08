@@ -1,3 +1,5 @@
+import java.io.File
+
 interface CourseRepository {
     fun getCourses(): List<LearningCourse>
     fun replaceCourses(courses: List<LearningCourse>)
@@ -6,6 +8,13 @@ interface CourseRepository {
 
 interface CourseRemoteSource {
     fun fetchCourses(): List<LearningCourse>
+}
+
+interface CourseLocalStore {
+    fun exists(): Boolean
+    fun loadCourses(): List<LearningCourse>
+    fun saveCourses(courses: List<LearningCourse>)
+    fun path(): String
 }
 
 class InMemoryCourseRepository(
@@ -67,4 +76,96 @@ class FakeCourseRemoteSource : CourseRemoteSource {
             bookmarked = true
         )
     )
+}
+
+class FileCourseLocalStore(
+    private val file: File
+) : CourseLocalStore {
+    override fun exists(): Boolean = file.exists()
+
+    override fun loadCourses(): List<LearningCourse> {
+        if (!file.exists()) {
+            return emptyList()
+        }
+
+        return CourseJsonCodec.decodeCourses(file.readText())
+    }
+
+    override fun saveCourses(courses: List<LearningCourse>) {
+        file.parentFile?.mkdirs()
+        file.writeText(CourseJsonCodec.encodeCourses(courses))
+    }
+
+    override fun path(): String = file.absolutePath
+}
+
+object CourseJsonCodec {
+    fun encodeCourses(courses: List<LearningCourse>): String {
+        return courses.joinToString(
+            prefix = "[\n",
+            postfix = "\n]",
+            separator = ",\n"
+        ) { course ->
+            """
+            |  {
+            |    "id": "${escape(course.id)}",
+            |    "title": "${escape(course.title)}",
+            |    "category": "${escape(course.category)}",
+            |    "level": "${course.level}",
+            |    "estimatedMinutes": ${course.estimatedMinutes},
+            |    "status": "${course.status}",
+            |    "bookmarked": ${course.bookmarked}
+            |  }
+            """.trimMargin()
+        }
+    }
+
+    fun decodeCourses(json: String): List<LearningCourse> {
+        val objectMatches = Regex("\\{(.*?)\\}", RegexOption.DOT_MATCHES_ALL).findAll(json)
+        return objectMatches.map { match ->
+            val block = match.value
+            LearningCourse(
+                id = readString(block, "id"),
+                title = readString(block, "title"),
+                category = readString(block, "category"),
+                level = CourseLevel.valueOf(readString(block, "level")),
+                estimatedMinutes = readInt(block, "estimatedMinutes"),
+                status = CourseStatus.valueOf(readString(block, "status")),
+                bookmarked = readBoolean(block, "bookmarked")
+            )
+        }.toList()
+    }
+
+    private fun readString(block: String, key: String): String {
+        val pattern = Regex("\"$key\"\\s*:\\s*\"((?:\\\\.|[^\"])*)\"")
+        val value = pattern.find(block)?.groupValues?.get(1)
+            ?: throw IllegalStateException("Missing string field: $key")
+        return unescape(value)
+    }
+
+    private fun readInt(block: String, key: String): Int {
+        val pattern = Regex("\"$key\"\\s*:\\s*(\\d+)")
+        val value = pattern.find(block)?.groupValues?.get(1)
+            ?: throw IllegalStateException("Missing int field: $key")
+        return value.toInt()
+    }
+
+    private fun readBoolean(block: String, key: String): Boolean {
+        val pattern = Regex("\"$key\"\\s*:\\s*(true|false)")
+        val value = pattern.find(block)?.groupValues?.get(1)
+            ?: throw IllegalStateException("Missing boolean field: $key")
+        return value.toBoolean()
+    }
+
+    private fun escape(text: String): String {
+        return text
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+    }
+
+    private fun unescape(text: String): String {
+        return text
+            .replace("\\\"", "\"")
+            .replace("\\\\", "\\")
+    }
 }

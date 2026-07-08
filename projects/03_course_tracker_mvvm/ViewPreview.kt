@@ -29,7 +29,8 @@ fun main() {
         ),
         query = "",
         filter = CourseStatusFilter.ALL,
-        statusMessage = "Preview state"
+        statusMessage = "Preview state",
+        persistencePath = "/tmp/course_tracker_preview.json"
     )
 
     println(CourseTrackerConsoleView.render(previewState))

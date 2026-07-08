@@ -1,5 +1,11 @@
+import java.io.File
+
+fun newTempStateFile(prefix: String): File {
+    return File.createTempFile(prefix, ".json")
+}
+
 fun testCourseTrackerLoadBuildsSummary() {
-    val viewModel = buildCourseTrackerViewModel()
+    val viewModel = buildCourseTrackerViewModel(newTempStateFile("course-tracker-load"))
 
     viewModel.dispatch(CourseTrackerAction.Load)
 
@@ -10,7 +16,7 @@ fun testCourseTrackerLoadBuildsSummary() {
 }
 
 fun testCourseTrackerSearchNarrowsVisibleCourses() {
-    val viewModel = buildCourseTrackerViewModel()
+    val viewModel = buildCourseTrackerViewModel(newTempStateFile("course-tracker-search"))
 
     viewModel.dispatch(CourseTrackerAction.Load)
     viewModel.dispatch(CourseTrackerAction.Search("Architecture"))
@@ -21,7 +27,7 @@ fun testCourseTrackerSearchNarrowsVisibleCourses() {
 }
 
 fun testCourseTrackerStatusUpdatesAffectSummary() {
-    val viewModel = buildCourseTrackerViewModel()
+    val viewModel = buildCourseTrackerViewModel(newTempStateFile("course-tracker-status"))
 
     viewModel.dispatch(CourseTrackerAction.Load)
     viewModel.dispatch(CourseTrackerAction.StartCourse("course-1"))
@@ -33,7 +39,7 @@ fun testCourseTrackerStatusUpdatesAffectSummary() {
 }
 
 fun testCourseTrackerBookmarkToggleChangesOrderingSignal() {
-    val viewModel = buildCourseTrackerViewModel()
+    val viewModel = buildCourseTrackerViewModel(newTempStateFile("course-tracker-bookmark"))
 
     viewModel.dispatch(CourseTrackerAction.Load)
     viewModel.dispatch(CourseTrackerAction.ToggleBookmark("course-3"))
@@ -43,10 +49,38 @@ fun testCourseTrackerBookmarkToggleChangesOrderingSignal() {
     printTestSuccess("testCourseTrackerBookmarkToggleChangesOrderingSignal")
 }
 
+fun testCourseTrackerPersistsAndRestoresLocalProgress() {
+    val persistenceFile = newTempStateFile("course-tracker-persist")
+    persistenceFile.delete()
+
+    val firstViewModel = buildCourseTrackerViewModel(persistenceFile)
+    firstViewModel.dispatch(CourseTrackerAction.Load)
+    firstViewModel.dispatch(CourseTrackerAction.ToggleBookmark("course-3"))
+    firstViewModel.dispatch(CourseTrackerAction.CompleteCourse("course-2"))
+    firstViewModel.dispatch(CourseTrackerAction.SaveProgress)
+
+    assertTrue(persistenceFile.exists(), "persistence file should exist")
+
+    val secondViewModel = buildCourseTrackerViewModel(persistenceFile)
+    secondViewModel.dispatch(CourseTrackerAction.Load)
+
+    assertContains(secondViewModel.state.statusMessage, "restored", "restored status message")
+    assertTrue(
+        secondViewModel.state.courses.any { it.id == "course-3" && it.bookmarked },
+        "bookmarked course should be restored"
+    )
+    assertTrue(
+        secondViewModel.state.courses.any { it.id == "course-2" && it.status == CourseStatus.COMPLETED },
+        "completed course should be restored"
+    )
+    printTestSuccess("testCourseTrackerPersistsAndRestoresLocalProgress")
+}
+
 fun main() {
     testCourseTrackerLoadBuildsSummary()
     testCourseTrackerSearchNarrowsVisibleCourses()
     testCourseTrackerStatusUpdatesAffectSummary()
     testCourseTrackerBookmarkToggleChangesOrderingSignal()
+    testCourseTrackerPersistsAndRestoresLocalProgress()
     println("All course tracker MVVM tests passed.")
 }

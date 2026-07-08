@@ -7,6 +7,25 @@ class SyncCoursesUseCase(
     }
 }
 
+class LoadCoursesFromLocalUseCase(
+    private val repository: CourseRepository,
+    private val localStore: CourseLocalStore
+) {
+    fun execute(): Boolean {
+        if (!localStore.exists()) {
+            return false
+        }
+
+        val courses = localStore.loadCourses()
+        if (courses.isEmpty()) {
+            return false
+        }
+
+        repository.replaceCourses(courses)
+        return true
+    }
+}
+
 class UpdateCourseStatusUseCase(
     private val repository: CourseRepository
 ) {
@@ -21,6 +40,15 @@ class UpdateCourseStatusUseCase(
     }
 }
 
+class SaveCoursesUseCase(
+    private val repository: CourseRepository,
+    private val localStore: CourseLocalStore
+) {
+    fun execute() {
+        localStore.saveCourses(repository.getCourses())
+    }
+}
+
 class ToggleBookmarkUseCase(
     private val repository: CourseRepository
 ) {
@@ -31,7 +59,8 @@ class ToggleBookmarkUseCase(
 }
 
 class BuildCourseTrackerStateUseCase(
-    private val repository: CourseRepository
+    private val repository: CourseRepository,
+    private val localStore: CourseLocalStore
 ) {
     fun execute(
         query: String,
@@ -72,7 +101,8 @@ class BuildCourseTrackerStateUseCase(
             summary = summary,
             query = query,
             filter = filter,
-            statusMessage = "Loaded ${visibleCourses.size} courses"
+            statusMessage = "Loaded ${visibleCourses.size} courses",
+            persistencePath = localStore.path()
         )
     }
 }

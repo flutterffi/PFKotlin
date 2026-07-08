@@ -40,11 +40,13 @@ data class CourseTrackerState(
     val summary: CourseSummary,
     val query: String,
     val filter: CourseStatusFilter,
-    val statusMessage: String
+    val statusMessage: String,
+    val persistencePath: String?
 )
 
 sealed class CourseTrackerAction {
     data object Load : CourseTrackerAction()
+    data object SaveProgress : CourseTrackerAction()
     data class Search(val query: String) : CourseTrackerAction()
     data class Filter(val filter: CourseStatusFilter) : CourseTrackerAction()
     data class StartCourse(val id: String) : CourseTrackerAction()

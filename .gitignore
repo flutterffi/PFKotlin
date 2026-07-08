@@ -16,3 +16,4 @@ out/
 build/
 hs_err_pid*
 replay_pid*
+data/course_tracker_state.json

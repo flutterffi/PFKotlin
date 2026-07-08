@@ -1,7 +1,9 @@
 class CourseTrackerViewModel(
     private val syncCoursesUseCase: SyncCoursesUseCase,
+    private val loadCoursesFromLocalUseCase: LoadCoursesFromLocalUseCase,
     private val updateCourseStatusUseCase: UpdateCourseStatusUseCase,
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
+    private val saveCoursesUseCase: SaveCoursesUseCase,
     private val buildStateUseCase: BuildCourseTrackerStateUseCase
 ) {
     private var query: String = ""
@@ -13,8 +15,19 @@ class CourseTrackerViewModel(
     fun dispatch(action: CourseTrackerAction) {
         when (action) {
             CourseTrackerAction.Load -> {
-                syncCoursesUseCase.execute()
-                refresh("Catalog synced")
+                val restored = loadCoursesFromLocalUseCase.execute()
+                if (restored) {
+                    refresh("Progress restored from disk")
+                } else {
+                    syncCoursesUseCase.execute()
+                    saveCoursesUseCase.execute()
+                    refresh("Catalog synced from remote and cached")
+                }
+            }
+
+            CourseTrackerAction.SaveProgress -> {
+                saveCoursesUseCase.execute()
+                refresh("Progress saved to disk")
             }
 
             is CourseTrackerAction.Search -> {
@@ -29,16 +42,19 @@ class CourseTrackerViewModel(
 
             is CourseTrackerAction.StartCourse -> {
                 updateCourseStatusUseCase.startCourse(action.id)
+                saveCoursesUseCase.execute()
                 refresh("Started ${action.id}")
             }
 
             is CourseTrackerAction.CompleteCourse -> {
                 updateCourseStatusUseCase.completeCourse(action.id)
+                saveCoursesUseCase.execute()
                 refresh("Completed ${action.id}")
             }
 
             is CourseTrackerAction.ToggleBookmark -> {
                 toggleBookmarkUseCase.execute(action.id)
+                saveCoursesUseCase.execute()
                 refresh("Bookmark toggled for ${action.id}")
             }
         }
@@ -56,6 +72,7 @@ object CourseTrackerConsoleView {
         lines += "status: ${state.statusMessage}"
         lines += "query: ${state.query.ifBlank { "<none>" }}"
         lines += "filter: ${state.filter}"
+        lines += "cache: ${state.persistencePath ?: "<none>"}"
         lines += "summary: total=${state.summary.totalCourses}, visible=${state.summary.visibleCourses}, completed=${state.summary.completedCourses}, bookmarked=${state.summary.bookmarkedCourses}, remaining=${state.summary.remainingMinutes}m"
 
         if (state.courses.isEmpty()) {
