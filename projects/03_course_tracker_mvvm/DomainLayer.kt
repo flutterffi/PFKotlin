@@ -76,10 +76,11 @@ class BuildCourseTrackerStateUseCase(
     fun execute(
         query: String,
         statusFilter: CourseStatusFilter,
-        levelFilter: CourseLevelFilter
+        levelFilter: CourseLevelFilter,
+        sortOption: CourseSortOption
     ): CourseTrackerState {
         val allCourses = repository.getCourses()
-        val visibleCourses = allCourses
+        val filteredCourses = allCourses
             .filter { course ->
                 val matchesQuery = query.isBlank() ||
                     course.title.contains(query, ignoreCase = true) ||
@@ -98,11 +99,7 @@ class BuildCourseTrackerStateUseCase(
                 }
                 matchesQuery && matchesStatusFilter && matchesLevelFilter
             }
-            .sortedWith(
-                compareByDescending<LearningCourse> { it.bookmarked }
-                    .thenByDescending { it.status == CourseStatus.IN_PROGRESS }
-                    .thenBy { it.estimatedMinutes }
-            )
+        val visibleCourses = sortCourses(filteredCourses, sortOption)
 
         val summary = CourseSummary(
             totalCourses = allCourses.size,
@@ -120,9 +117,31 @@ class BuildCourseTrackerStateUseCase(
             query = query,
             statusFilter = statusFilter,
             levelFilter = levelFilter,
+            sortOption = sortOption,
             statusMessage = "Loaded ${visibleCourses.size} courses",
+            errorMessage = null,
             persistencePath = localStore.path(),
             lastIntent = "InitialState"
         )
+    }
+
+    private fun sortCourses(
+        courses: List<LearningCourse>,
+        sortOption: CourseSortOption
+    ): List<LearningCourse> {
+        return when (sortOption) {
+            CourseSortOption.SMART -> courses.sortedWith(
+                compareByDescending<LearningCourse> { it.bookmarked }
+                    .thenByDescending { it.status == CourseStatus.IN_PROGRESS }
+                    .thenBy { it.estimatedMinutes }
+            )
+
+            CourseSortOption.TITLE_ASC -> courses.sortedBy { it.title }
+            CourseSortOption.MINUTES_ASC -> courses.sortedBy { it.estimatedMinutes }
+            CourseSortOption.LEVEL_DESC -> courses.sortedWith(
+                compareByDescending<LearningCourse> { it.level.ordinal }
+                    .thenBy { it.title }
+            )
+        }
     }
 }

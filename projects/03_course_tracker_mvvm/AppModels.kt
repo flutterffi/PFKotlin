@@ -34,6 +34,13 @@ enum class CourseLevelFilter {
     ADVANCED
 }
 
+enum class CourseSortOption {
+    SMART,
+    TITLE_ASC,
+    MINUTES_ASC,
+    LEVEL_DESC
+}
+
 data class CourseSummary(
     val totalCourses: Int,
     val visibleCourses: Int,
@@ -48,7 +55,9 @@ data class CourseTrackerState(
     val query: String,
     val statusFilter: CourseStatusFilter,
     val levelFilter: CourseLevelFilter,
+    val sortOption: CourseSortOption,
     val statusMessage: String,
+    val errorMessage: String?,
     val persistencePath: String?,
     val lastIntent: String
 )
@@ -60,6 +69,7 @@ sealed class CourseTrackerIntent {
     data class Search(val query: String) : CourseTrackerIntent()
     data class FilterByStatus(val filter: CourseStatusFilter) : CourseTrackerIntent()
     data class FilterByLevel(val filter: CourseLevelFilter) : CourseTrackerIntent()
+    data class SortBy(val option: CourseSortOption) : CourseTrackerIntent()
     data class StartCourse(val id: String) : CourseTrackerIntent()
     data class CompleteCourse(val id: String) : CourseTrackerIntent()
     data class ToggleBookmark(val id: String) : CourseTrackerIntent()
@@ -70,7 +80,9 @@ sealed class CourseTrackerMutation {
         val query: String,
         val statusFilter: CourseStatusFilter,
         val levelFilter: CourseLevelFilter,
+        val sortOption: CourseSortOption,
         val statusMessage: String,
+        val errorMessage: String?,
         val lastIntent: String
     ) : CourseTrackerMutation()
 }

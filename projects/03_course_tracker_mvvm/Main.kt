@@ -49,10 +49,15 @@ fun main() {
     println(CourseTrackerConsoleView.render(viewModel.state))
     println()
 
+    viewModel.dispatch(CourseTrackerIntent.SortBy(CourseSortOption.TITLE_ASC))
+    println(CourseTrackerConsoleView.render(viewModel.state))
+    println()
+
     viewModel.dispatch(CourseTrackerIntent.ToggleBookmark("course-3"))
     viewModel.dispatch(CourseTrackerIntent.Search(""))
     viewModel.dispatch(CourseTrackerIntent.FilterByStatus(CourseStatusFilter.ALL))
     viewModel.dispatch(CourseTrackerIntent.FilterByLevel(CourseLevelFilter.ALL))
+    viewModel.dispatch(CourseTrackerIntent.SortBy(CourseSortOption.SMART))
     viewModel.dispatch(CourseTrackerIntent.StartCourse("course-1"))
     viewModel.dispatch(CourseTrackerIntent.CompleteCourse("course-2"))
     viewModel.dispatch(CourseTrackerIntent.SaveProgress)

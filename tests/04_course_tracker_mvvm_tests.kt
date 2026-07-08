@@ -133,6 +133,34 @@ fun testCourseTrackerCanFilterByLevelAndStatusTogether() {
     printTestSuccess("testCourseTrackerCanFilterByLevelAndStatusTogether")
 }
 
+fun testCourseTrackerCanSortByMinutes() {
+    val viewModel = buildCourseTrackerViewModel(newTempStateFile("course-tracker-sort"))
+
+    viewModel.dispatch(CourseTrackerIntent.Load)
+    viewModel.dispatch(CourseTrackerIntent.SortBy(CourseSortOption.MINUTES_ASC))
+
+    assertEquals(CourseSortOption.MINUTES_ASC, viewModel.state.sortOption, "sort option state")
+    assertEquals("course-1", viewModel.state.courses.first().id, "shortest course should come first")
+    assertEquals("SortBy", viewModel.state.lastIntent, "last intent after sort")
+    printTestSuccess("testCourseTrackerCanSortByMinutes")
+}
+
+fun testCourseTrackerImportFailureSetsErrorState() {
+    val viewModel = buildCourseTrackerViewModel(newTempStateFile("course-tracker-error"))
+
+    viewModel.dispatch(CourseTrackerIntent.Load)
+    viewModel.dispatch(CourseTrackerIntent.ImportCatalog("/tmp/does-not-exist-course-catalog.json"))
+
+    assertEquals("Operation failed", viewModel.state.statusMessage, "failure status message")
+    assertContains(
+        viewModel.state.errorMessage ?: "",
+        "Catalog file not found",
+        "failure error message"
+    )
+    assertEquals("ImportCatalog", viewModel.state.lastIntent, "last intent after import failure")
+    printTestSuccess("testCourseTrackerImportFailureSetsErrorState")
+}
+
 fun testCourseTrackerReducerBuildsStateFromMutation() {
     val initialState = CourseTrackerState(
         courses = emptyList(),
@@ -146,7 +174,9 @@ fun testCourseTrackerReducerBuildsStateFromMutation() {
         query = "",
         statusFilter = CourseStatusFilter.ALL,
         levelFilter = CourseLevelFilter.ALL,
+        sortOption = CourseSortOption.SMART,
         statusMessage = "Initial",
+        errorMessage = null,
         persistencePath = "/tmp/test.json",
         lastIntent = "InitialState"
     )
@@ -157,10 +187,12 @@ fun testCourseTrackerReducerBuildsStateFromMutation() {
             query = "Kotlin",
             statusFilter = CourseStatusFilter.IN_PROGRESS,
             levelFilter = CourseLevelFilter.INTERMEDIATE,
+            sortOption = CourseSortOption.LEVEL_DESC,
             statusMessage = "Reducer applied",
+            errorMessage = null,
             lastIntent = "Search"
         )
-    ) { query, statusFilter, levelFilter ->
+    ) { query, statusFilter, levelFilter, sortOption ->
         CourseTrackerState(
             courses = listOf(
                 LearningCourse(
@@ -183,7 +215,9 @@ fun testCourseTrackerReducerBuildsStateFromMutation() {
             query = query,
             statusFilter = statusFilter,
             levelFilter = levelFilter,
+            sortOption = sortOption,
             statusMessage = "Generated",
+            errorMessage = null,
             persistencePath = "/tmp/test.json",
             lastIntent = "Generated"
         )
@@ -192,6 +226,7 @@ fun testCourseTrackerReducerBuildsStateFromMutation() {
     assertEquals("Kotlin", reducedState.query, "reduced query")
     assertEquals(CourseStatusFilter.IN_PROGRESS, reducedState.statusFilter, "reduced status filter")
     assertEquals(CourseLevelFilter.INTERMEDIATE, reducedState.levelFilter, "reduced level filter")
+    assertEquals(CourseSortOption.LEVEL_DESC, reducedState.sortOption, "reduced sort option")
     assertEquals("Reducer applied", reducedState.statusMessage, "reduced status message")
     assertEquals("Search", reducedState.lastIntent, "reduced last intent")
     assertEquals(1, reducedState.courses.size, "reduced course count")
@@ -206,6 +241,8 @@ fun main() {
     testCourseTrackerPersistsAndRestoresLocalProgress()
     testCourseTrackerImportsCatalogFromJson()
     testCourseTrackerCanFilterByLevelAndStatusTogether()
+    testCourseTrackerCanSortByMinutes()
+    testCourseTrackerImportFailureSetsErrorState()
     testCourseTrackerReducerBuildsStateFromMutation()
     println("All course tracker MVVM tests passed.")
 }

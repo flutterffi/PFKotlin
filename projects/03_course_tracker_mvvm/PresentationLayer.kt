@@ -2,12 +2,18 @@ object CourseTrackerReducer {
     fun reduce(
         currentState: CourseTrackerState,
         mutation: CourseTrackerMutation,
-        buildState: (String, CourseStatusFilter, CourseLevelFilter) -> CourseTrackerState
+        buildState: (String, CourseStatusFilter, CourseLevelFilter, CourseSortOption) -> CourseTrackerState
     ): CourseTrackerState {
         return when (mutation) {
             is CourseTrackerMutation.Content -> {
-                buildState(mutation.query, mutation.statusFilter, mutation.levelFilter).copy(
+                buildState(
+                    mutation.query,
+                    mutation.statusFilter,
+                    mutation.levelFilter,
+                    mutation.sortOption
+                ).copy(
                     statusMessage = mutation.statusMessage,
+                    errorMessage = mutation.errorMessage,
                     lastIntent = mutation.lastIntent.ifBlank { currentState.lastIntent }
                 )
             }
@@ -27,146 +33,190 @@ class CourseTrackerViewModel(
     private var query: String = ""
     private var statusFilter: CourseStatusFilter = CourseStatusFilter.ALL
     private var levelFilter: CourseLevelFilter = CourseLevelFilter.ALL
+    private var sortOption: CourseSortOption = CourseSortOption.SMART
 
-    var state: CourseTrackerState = buildStateUseCase.execute(query, statusFilter, levelFilter)
+    var state: CourseTrackerState = buildStateUseCase.execute(query, statusFilter, levelFilter, sortOption)
         private set
 
     fun dispatch(intent: CourseTrackerIntent) {
-        when (intent) {
-            CourseTrackerIntent.Load -> {
-                val restored = loadCoursesFromLocalUseCase.execute()
-                if (restored) {
-                    reduce(
-                        CourseTrackerMutation.Content(
-                            query = query,
-                            statusFilter = statusFilter,
-                            levelFilter = levelFilter,
-                            statusMessage = "Progress restored from disk",
-                            lastIntent = "Load"
+        try {
+            when (intent) {
+                CourseTrackerIntent.Load -> {
+                    val restored = loadCoursesFromLocalUseCase.execute()
+                    if (restored) {
+                        reduce(
+                            CourseTrackerMutation.Content(
+                                query = query,
+                                statusFilter = statusFilter,
+                                levelFilter = levelFilter,
+                                sortOption = sortOption,
+                                statusMessage = "Progress restored from disk",
+                                errorMessage = null,
+                                lastIntent = "Load"
+                            )
                         )
-                    )
-                } else {
-                    syncCoursesUseCase.execute()
+                    } else {
+                        syncCoursesUseCase.execute()
+                        saveCoursesUseCase.execute()
+                        reduce(
+                            CourseTrackerMutation.Content(
+                                query = query,
+                                statusFilter = statusFilter,
+                                levelFilter = levelFilter,
+                                sortOption = sortOption,
+                                statusMessage = "Catalog synced from remote and cached",
+                                errorMessage = null,
+                                lastIntent = "Load"
+                            )
+                        )
+                    }
+                }
+
+                is CourseTrackerIntent.ImportCatalog -> {
+                    val importedCount = importCatalogUseCase.execute(intent.path)
                     saveCoursesUseCase.execute()
                     reduce(
                         CourseTrackerMutation.Content(
                             query = query,
                             statusFilter = statusFilter,
                             levelFilter = levelFilter,
-                            statusMessage = "Catalog synced from remote and cached",
-                            lastIntent = "Load"
+                            sortOption = sortOption,
+                            statusMessage = "Imported $importedCount courses from catalog",
+                            errorMessage = null,
+                            lastIntent = "ImportCatalog"
+                        )
+                    )
+                }
+
+                CourseTrackerIntent.SaveProgress -> {
+                    saveCoursesUseCase.execute()
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            statusFilter = statusFilter,
+                            levelFilter = levelFilter,
+                            sortOption = sortOption,
+                            statusMessage = "Progress saved to disk",
+                            errorMessage = null,
+                            lastIntent = "SaveProgress"
+                        )
+                    )
+                }
+
+                is CourseTrackerIntent.Search -> {
+                    query = intent.query.trim()
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            statusFilter = statusFilter,
+                            levelFilter = levelFilter,
+                            sortOption = sortOption,
+                            statusMessage = "Search updated",
+                            errorMessage = null,
+                            lastIntent = "Search"
+                        )
+                    )
+                }
+
+                is CourseTrackerIntent.FilterByStatus -> {
+                    statusFilter = intent.filter
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            statusFilter = statusFilter,
+                            levelFilter = levelFilter,
+                            sortOption = sortOption,
+                            statusMessage = "Status filter changed to ${intent.filter}",
+                            errorMessage = null,
+                            lastIntent = "FilterByStatus"
+                        )
+                    )
+                }
+
+                is CourseTrackerIntent.FilterByLevel -> {
+                    levelFilter = intent.filter
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            statusFilter = statusFilter,
+                            levelFilter = levelFilter,
+                            sortOption = sortOption,
+                            statusMessage = "Level filter changed to ${intent.filter}",
+                            errorMessage = null,
+                            lastIntent = "FilterByLevel"
+                        )
+                    )
+                }
+
+                is CourseTrackerIntent.SortBy -> {
+                    sortOption = intent.option
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            statusFilter = statusFilter,
+                            levelFilter = levelFilter,
+                            sortOption = sortOption,
+                            statusMessage = "Sort changed to ${intent.option}",
+                            errorMessage = null,
+                            lastIntent = "SortBy"
+                        )
+                    )
+                }
+
+                is CourseTrackerIntent.StartCourse -> {
+                    updateCourseStatusUseCase.startCourse(intent.id)
+                    saveCoursesUseCase.execute()
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            statusFilter = statusFilter,
+                            levelFilter = levelFilter,
+                            sortOption = sortOption,
+                            statusMessage = "Started ${intent.id}",
+                            errorMessage = null,
+                            lastIntent = "StartCourse"
+                        )
+                    )
+                }
+
+                is CourseTrackerIntent.CompleteCourse -> {
+                    updateCourseStatusUseCase.completeCourse(intent.id)
+                    saveCoursesUseCase.execute()
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            statusFilter = statusFilter,
+                            levelFilter = levelFilter,
+                            sortOption = sortOption,
+                            statusMessage = "Completed ${intent.id}",
+                            errorMessage = null,
+                            lastIntent = "CompleteCourse"
+                        )
+                    )
+                }
+
+                is CourseTrackerIntent.ToggleBookmark -> {
+                    toggleBookmarkUseCase.execute(intent.id)
+                    saveCoursesUseCase.execute()
+                    reduce(
+                        CourseTrackerMutation.Content(
+                            query = query,
+                            statusFilter = statusFilter,
+                            levelFilter = levelFilter,
+                            sortOption = sortOption,
+                            statusMessage = "Bookmark toggled for ${intent.id}",
+                            errorMessage = null,
+                            lastIntent = "ToggleBookmark"
                         )
                     )
                 }
             }
-
-            is CourseTrackerIntent.ImportCatalog -> {
-                val importedCount = importCatalogUseCase.execute(intent.path)
-                saveCoursesUseCase.execute()
-                reduce(
-                    CourseTrackerMutation.Content(
-                        query = query,
-                        statusFilter = statusFilter,
-                        levelFilter = levelFilter,
-                        statusMessage = "Imported $importedCount courses from catalog",
-                        lastIntent = "ImportCatalog"
-                    )
-                )
-            }
-
-            CourseTrackerIntent.SaveProgress -> {
-                saveCoursesUseCase.execute()
-                reduce(
-                    CourseTrackerMutation.Content(
-                        query = query,
-                        statusFilter = statusFilter,
-                        levelFilter = levelFilter,
-                        statusMessage = "Progress saved to disk",
-                        lastIntent = "SaveProgress"
-                    )
-                )
-            }
-
-            is CourseTrackerIntent.Search -> {
-                query = intent.query.trim()
-                reduce(
-                    CourseTrackerMutation.Content(
-                        query = query,
-                        statusFilter = statusFilter,
-                        levelFilter = levelFilter,
-                        statusMessage = "Search updated",
-                        lastIntent = "Search"
-                    )
-                )
-            }
-
-            is CourseTrackerIntent.FilterByStatus -> {
-                statusFilter = intent.filter
-                reduce(
-                    CourseTrackerMutation.Content(
-                        query = query,
-                        statusFilter = statusFilter,
-                        levelFilter = levelFilter,
-                        statusMessage = "Status filter changed to ${intent.filter}",
-                        lastIntent = "FilterByStatus"
-                    )
-                )
-            }
-
-            is CourseTrackerIntent.FilterByLevel -> {
-                levelFilter = intent.filter
-                reduce(
-                    CourseTrackerMutation.Content(
-                        query = query,
-                        statusFilter = statusFilter,
-                        levelFilter = levelFilter,
-                        statusMessage = "Level filter changed to ${intent.filter}",
-                        lastIntent = "FilterByLevel"
-                    )
-                )
-            }
-
-            is CourseTrackerIntent.StartCourse -> {
-                updateCourseStatusUseCase.startCourse(intent.id)
-                saveCoursesUseCase.execute()
-                reduce(
-                    CourseTrackerMutation.Content(
-                        query = query,
-                        statusFilter = statusFilter,
-                        levelFilter = levelFilter,
-                        statusMessage = "Started ${intent.id}",
-                        lastIntent = "StartCourse"
-                    )
-                )
-            }
-
-            is CourseTrackerIntent.CompleteCourse -> {
-                updateCourseStatusUseCase.completeCourse(intent.id)
-                saveCoursesUseCase.execute()
-                reduce(
-                    CourseTrackerMutation.Content(
-                        query = query,
-                        statusFilter = statusFilter,
-                        levelFilter = levelFilter,
-                        statusMessage = "Completed ${intent.id}",
-                        lastIntent = "CompleteCourse"
-                    )
-                )
-            }
-
-            is CourseTrackerIntent.ToggleBookmark -> {
-                toggleBookmarkUseCase.execute(intent.id)
-                saveCoursesUseCase.execute()
-                reduce(
-                    CourseTrackerMutation.Content(
-                        query = query,
-                        statusFilter = statusFilter,
-                        levelFilter = levelFilter,
-                        statusMessage = "Bookmark toggled for ${intent.id}",
-                        lastIntent = "ToggleBookmark"
-                    )
-                )
-            }
+        } catch (error: IllegalStateException) {
+            state = state.copy(
+                statusMessage = "Operation failed",
+                errorMessage = error.message ?: "Unknown operation error",
+                lastIntent = intent::class.simpleName ?: "UnknownIntent"
+            )
         }
     }
 
@@ -183,8 +233,12 @@ object CourseTrackerConsoleView {
         lines += "query: ${state.query.ifBlank { "<none>" }}"
         lines += "status-filter: ${state.statusFilter}"
         lines += "level-filter: ${state.levelFilter}"
+        lines += "sort: ${state.sortOption}"
         lines += "last-intent: ${state.lastIntent}"
         lines += "cache: ${state.persistencePath ?: "<none>"}"
+        if (state.errorMessage != null) {
+            lines += "error: ${state.errorMessage}"
+        }
         lines += "summary: total=${state.summary.totalCourses}, visible=${state.summary.visibleCourses}, completed=${state.summary.completedCourses}, bookmarked=${state.summary.bookmarkedCourses}, remaining=${state.summary.remainingMinutes}m"
 
         if (state.courses.isEmpty()) {

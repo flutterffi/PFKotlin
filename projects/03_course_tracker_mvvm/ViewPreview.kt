@@ -30,7 +30,9 @@ fun main() {
         query = "",
         statusFilter = CourseStatusFilter.ALL,
         levelFilter = CourseLevelFilter.ALL,
+        sortOption = CourseSortOption.SMART,
         statusMessage = "Preview state",
+        errorMessage = null,
         persistencePath = "/tmp/course_tracker_preview.json",
         lastIntent = "Preview"
     )
