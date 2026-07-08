@@ -209,6 +209,51 @@ fun testLearningHubEventChannelReceivesOneShotEvents() {
     printTestSuccess("testLearningHubEventChannelReceivesOneShotEvents")
 }
 
+fun testLearningHubCanJumpToHistoryAndReturnLive() {
+    val snapshot = newLearningHubSnapshot("learning-hub-history")
+    snapshot.delete()
+    val store = buildLearningHubStore(snapshot)
+
+    store.dispatch(LearningHubIntent.Bootstrap)
+    store.dispatch(LearningHubIntent.FilterTrack(LessonTrack.ARCHITECTURE))
+    store.dispatch(LearningHubIntent.OpenLesson("lesson-5"))
+
+    val entries = store.historyEntries()
+    assertTrue(entries.size >= 4, "history should capture multiple states")
+
+    store.dispatch(LearningHubIntent.JumpToHistory(1))
+
+    assertTrue(store.state.isTimeTraveling, "store should be time traveling")
+    assertEquals(1, store.state.historyIndex, "history index after jump")
+    assertEquals("JumpToHistory", store.state.lastIntent, "last intent after history jump")
+
+    store.dispatch(LearningHubIntent.ReturnToLive)
+
+    assertTrue(!store.state.isTimeTraveling, "store should return to live mode")
+    assertEquals("ReturnToLive", store.state.lastIntent, "last intent after live return")
+    assertEquals(entries.last().route, store.state.route, "live route should be restored")
+    printTestSuccess("testLearningHubCanJumpToHistoryAndReturnLive")
+}
+
+fun testLearningHubMutationAfterHistoryJumpReturnsToLiveState() {
+    val snapshot = newLearningHubSnapshot("learning-hub-history-mutate")
+    snapshot.delete()
+    val store = buildLearningHubStore(snapshot)
+
+    store.dispatch(LearningHubIntent.Bootstrap)
+    store.dispatch(LearningHubIntent.FilterTrack(LessonTrack.ARCHITECTURE))
+    store.dispatch(LearningHubIntent.JumpToHistory(0))
+
+    assertTrue(store.state.isTimeTraveling, "store should be time traveling before mutation")
+
+    store.dispatch(LearningHubIntent.SetConflictStrategy(ConflictStrategy.REMOTE_WINS))
+
+    assertTrue(!store.state.isTimeTraveling, "mutation should restore live state")
+    assertEquals(ConflictStrategy.REMOTE_WINS, store.state.conflictStrategy, "mutation should apply on live state")
+    assertEquals("SetConflictStrategy", store.state.lastIntent, "last intent after mutation from history")
+    printTestSuccess("testLearningHubMutationAfterHistoryJumpReturnsToLiveState")
+}
+
 fun main() {
     testLearningHubBootstrapLoadsRemoteCatalog()
     testLearningHubBootstrapShowsIntermediateProgress()
@@ -222,5 +267,7 @@ fun main() {
     testLearningHubCanSwitchConflictStrategy()
     testLearningHubRefreshClearsPendingChangesAfterMerge()
     testLearningHubEventChannelReceivesOneShotEvents()
+    testLearningHubCanJumpToHistoryAndReturnLive()
+    testLearningHubMutationAfterHistoryJumpReturnsToLiveState()
     println("All learning hub store tests passed.")
 }

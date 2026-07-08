@@ -52,6 +52,14 @@ data class HubEvent(
     val message: String
 )
 
+data class HubHistoryEntry(
+    val index: Int,
+    val lastIntent: String,
+    val syncStage: SyncStage,
+    val route: HubRoute,
+    val statusMessage: String
+)
+
 data class LearningHubSummary(
     val totalLessons: Int,
     val visibleLessons: Int,
@@ -71,6 +79,9 @@ data class LearningHubState(
     val isOfflineReady: Boolean,
     val conflictStrategy: ConflictStrategy,
     val pendingSyncCount: Int,
+    val historySize: Int,
+    val historyIndex: Int,
+    val isTimeTraveling: Boolean,
     val statusMessage: String,
     val errorMessage: String?,
     val notice: HubNotice?,
@@ -83,6 +94,8 @@ sealed class LearningHubIntent {
     data object RefreshCatalog : LearningHubIntent()
     data object RetrySync : LearningHubIntent()
     data object SaveSnapshot : LearningHubIntent()
+    data class JumpToHistory(val index: Int) : LearningHubIntent()
+    data object ReturnToLive : LearningHubIntent()
     data class SetConflictStrategy(val strategy: ConflictStrategy) : LearningHubIntent()
     data class OpenLesson(val lessonId: String) : LearningHubIntent()
     data object BackToDashboard : LearningHubIntent()

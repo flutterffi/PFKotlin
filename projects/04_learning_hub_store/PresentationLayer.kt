@@ -44,7 +44,7 @@ object LearningHubReducer {
     fun reduce(
         currentState: LearningHubState,
         mutation: LearningHubMutation,
-        buildState: (HubRoute, LessonTrack?, SyncStage, ConflictStrategy, Int, String, String?, HubNotice?, String) -> LearningHubState
+        buildState: (HubRoute, LessonTrack?, SyncStage, ConflictStrategy, Int, Int, Int, Boolean, String, String?, HubNotice?, String) -> LearningHubState
     ): LearningHubState {
         return when (mutation) {
             is LearningHubMutation.Progress -> {
@@ -66,6 +66,9 @@ object LearningHubReducer {
                     mutation.syncStage,
                     currentState.conflictStrategy,
                     currentState.pendingSyncCount,
+                    currentState.historySize,
+                    currentState.historyIndex,
+                    currentState.isTimeTraveling,
                     mutation.statusMessage,
                     mutation.errorMessage,
                     mutation.notice,
@@ -94,6 +97,7 @@ class LearningHubStore(
     private var errorMessage: String? = null
     private var notice: HubNotice? = null
     private val pendingChanges = mutableListOf<PendingSyncChange>()
+    private val history = mutableListOf<LearningHubState>()
     private val observers = linkedMapOf<Int, LearningHubStateObserver>()
     private val eventObservers = linkedMapOf<Int, LearningHubEventObserver>()
     private var nextObserverId: Int = 1
@@ -104,12 +108,20 @@ class LearningHubStore(
         syncStage = syncStage,
         conflictStrategy = conflictStrategy,
         pendingSyncCount = pendingChanges.size,
+        historySize = 0,
+        historyIndex = 0,
+        isTimeTraveling = false,
         statusMessage = statusMessage,
         errorMessage = errorMessage,
         notice = notice,
         lastIntent = "InitialState"
     )
         private set
+    private var liveState: LearningHubState = state
+
+    init {
+        appendHistory(state)
+    }
 
     fun observe(observer: LearningHubStateObserver): LearningHubSubscription {
         val observerId = nextObserverId++
@@ -130,7 +142,33 @@ class LearningHubStore(
 
     fun dispatch(intent: LearningHubIntent) {
         when (intent) {
+            is LearningHubIntent.JumpToHistory -> {
+                val historyState = history.getOrNull(intent.index)
+                    ?: throw IllegalStateException("History index out of range: ${intent.index}")
+                state = historyState.copy(
+                    historySize = history.size,
+                    historyIndex = intent.index,
+                    isTimeTraveling = true,
+                    notice = null,
+                    lastIntent = "JumpToHistory"
+                )
+                notifyObservers()
+                emitEvent(HubEvent("history_jump", "Jumped to history index ${intent.index}"))
+            }
+
+            LearningHubIntent.ReturnToLive -> {
+                state = liveState.copy(
+                    historySize = history.size,
+                    historyIndex = history.lastIndex.coerceAtLeast(0),
+                    isTimeTraveling = false,
+                    lastIntent = "ReturnToLive"
+                )
+                notifyObservers()
+                emitEvent(HubEvent("history_live", "Returned to live state"))
+            }
+
             LearningHubIntent.Bootstrap -> {
+                returnToLiveIfNeeded()
                 reduce(
                     LearningHubMutation.Progress(
                         route = route,
@@ -147,6 +185,7 @@ class LearningHubStore(
 
             LearningHubIntent.RefreshCatalog,
             LearningHubIntent.RetrySync -> {
+                returnToLiveIfNeeded()
                 reduce(
                     LearningHubMutation.Progress(
                         route = route,
@@ -162,6 +201,7 @@ class LearningHubStore(
             }
 
             LearningHubIntent.SaveSnapshot -> {
+                returnToLiveIfNeeded()
                 val message = saveSnapshotUseCase.execute()
                 reduce(
                     LearningHubMutation.Content(
@@ -178,18 +218,24 @@ class LearningHubStore(
             }
 
             is LearningHubIntent.SetConflictStrategy -> {
+                returnToLiveIfNeeded()
                 conflictStrategy = intent.strategy
-                state = state.copy(
+                liveState = liveState.copy(
                     conflictStrategy = conflictStrategy,
+                    historySize = history.size,
+                    historyIndex = history.lastIndex.coerceAtLeast(0),
+                    isTimeTraveling = false,
                     statusMessage = "Conflict strategy changed to ${intent.strategy}",
                     errorMessage = null,
                     lastIntent = "SetConflictStrategy"
                 )
+                appendHistory(liveState)
                 notifyObservers()
                 emitEvent(HubEvent("strategy_changed", "Conflict strategy set to ${intent.strategy}"))
             }
 
             is LearningHubIntent.OpenLesson -> {
+                returnToLiveIfNeeded()
                 route = HubRoute.LessonDetail(intent.lessonId)
                 reduce(
                     LearningHubMutation.Content(
@@ -205,6 +251,7 @@ class LearningHubStore(
             }
 
             LearningHubIntent.BackToDashboard -> {
+                returnToLiveIfNeeded()
                 route = HubRoute.Dashboard
                 reduce(
                     LearningHubMutation.Content(
@@ -220,6 +267,7 @@ class LearningHubStore(
             }
 
             is LearningHubIntent.FilterTrack -> {
+                returnToLiveIfNeeded()
                 activeTrack = intent.track
                 route = HubRoute.Dashboard
                 reduce(
@@ -236,6 +284,7 @@ class LearningHubStore(
             }
 
             is LearningHubIntent.ToggleBookmark -> {
+                returnToLiveIfNeeded()
                 val updatedLesson = toggleBookmarkUseCase.execute(intent.lessonId)
                 rememberPendingChange(intent.lessonId, PendingChangeType.TOGGLE_BOOKMARK)
                 saveSnapshotUseCase.execute()
@@ -254,6 +303,7 @@ class LearningHubStore(
             }
 
             is LearningHubIntent.CompleteLesson -> {
+                returnToLiveIfNeeded()
                 val updatedLesson = completeLessonUseCase.execute(intent.lessonId)
                 rememberPendingChange(intent.lessonId, PendingChangeType.COMPLETE_LESSON)
                 saveSnapshotUseCase.execute()
@@ -272,6 +322,7 @@ class LearningHubStore(
             }
 
             LearningHubIntent.ClearNotice -> {
+                returnToLiveIfNeeded()
                 reduce(
                     LearningHubMutation.Content(
                         route = route,
@@ -373,16 +424,56 @@ class LearningHubStore(
             is LearningHubMutation.Content -> mutation.notice
         }
         state = LearningHubReducer.reduce(state, mutation, buildStateUseCase::execute)
-        state = state.copy(
+        liveState = state.copy(
             conflictStrategy = conflictStrategy,
-            pendingSyncCount = pendingChanges.size
+            pendingSyncCount = pendingChanges.size,
+            historySize = history.size,
+            historyIndex = history.lastIndex.coerceAtLeast(0),
+            isTimeTraveling = false
         )
+        state = liveState
+        appendHistory(liveState)
         notifyObservers()
+    }
+
+    fun historyEntries(): List<HubHistoryEntry> {
+        return history.mapIndexed { index, item ->
+            HubHistoryEntry(
+                index = index,
+                lastIntent = item.lastIntent,
+                syncStage = item.syncStage,
+                route = item.route,
+                statusMessage = item.statusMessage
+            )
+        }
     }
 
     private fun rememberPendingChange(lessonId: String, type: PendingChangeType) {
         pendingChanges.removeAll { it.lessonId == lessonId && it.type == type }
         pendingChanges += PendingSyncChange(lessonId, type)
+    }
+
+    private fun appendHistory(newState: LearningHubState) {
+        history += newState.copy(
+            historySize = history.size + 1,
+            historyIndex = history.size,
+            isTimeTraveling = false
+        )
+        liveState = history.last()
+        state = liveState
+    }
+
+    private fun returnToLiveIfNeeded() {
+        if (!state.isTimeTraveling) {
+            return
+        }
+        state = liveState.copy(
+            historySize = history.size,
+            historyIndex = history.lastIndex.coerceAtLeast(0),
+            isTimeTraveling = false,
+            lastIntent = "ReturnToLive"
+        )
+        notifyObservers()
     }
 
     private fun notifyObservers() {
@@ -409,6 +500,8 @@ object LearningHubConsoleView {
         lines += "offline-ready: ${state.isOfflineReady}"
         lines += "conflict-strategy: ${state.conflictStrategy}"
         lines += "pending-sync: ${state.pendingSyncCount}"
+        lines += "history: ${state.historyIndex + 1}/${state.historySize}"
+        lines += "time-traveling: ${state.isTimeTraveling}"
         lines += "last-intent: ${state.lastIntent}"
         lines += "snapshot: ${state.persistencePath ?: "<none>"}"
         if (state.errorMessage != null) {
